@@ -1,0 +1,147 @@
+*******************************************
+Microsersice Overview : What and Why ?
+
+MicroSErvice est une suite de petits service, chacun executant son propre prcess and commincant avec des mechanisms "legers" (http).
+Ces services sont orentés métiers et deployabes indépendamment et deployables de manière totalement automatique
+
+
+
+JAmes Lexis and Martin Fowler
+
+plusieurs code base
+Plusieurs équipes
+Plusieurs paradigm
+Plusieurs invocation (Rabbit, Http, UDP)
+
+MicroµService is about Agility => Breed Speed
+
+Breaking the 3 months delivery cycle.
+Your code offers no value until it is in production
+
+=> reorg to devops
+=> Elasticity (self service on demand)=> infrastructure as code. I need a virtaul machine so I can provionne it right now !!!! 
+=> automation => Gold Virutal Machine (Ansible)
+=> CI /CD
+=> Deployment Technique : Blue Green / Canary
+
+Signal Important qu'il est temps de changer quelque chose: Est qu'eun ressource couteuse comme une developpeur senoior doit attendre longtemps (3 weeks) pour obtenir quelque chose qui ne coute rien (VM) 
+
+Water Scrum Fall
+
+Book: The Phoenix Project  
+
+https://developers.redhat.com/products/cdk/download
+
+*******************************************
+MicroServices Principles.
+*******************************************
+1 - Deployement Independance
+2 - Organisé en business fonctionnalité et dans le Time to Market 
+3 - Product not Project
+4 - API Focused
+5 - Smart EndPoint => Do not break API endpoint SHAME !!!!
+6 - Decentralized Governance: Each team is reposible for his product in terms of technologiy and quality
+7 - Decentrelized Data Management => Pas une seule BDD pour tous les projets mais au moins une par produit
+8 - Insfrastructure As Code 
+9 - Design for failure
+10 - Evolutionnary Design
+
+openshift
+
+*******************************************
+Discovery and Invocation
+*******************************************
+
+*******************************************
+Microservices Pattern
+*******************************************
+It is about failure and resiliency
+Il faut penser a ce qui doit arriver coté client quand un microservice ne fonctionne pas
+
+https://github.com/redhat-helloworld-msa/helloworld-msa
+
+Pattern 1: API Gateway
+Edge service 
+=> aggrefate business logic
+=> reduce traffic
+=> protecting from security layer perspective
+=> specialiser la gateway pour certains type d'utilisateurs / groups, hardware utilisé
+
+Pattern 2: Chaining
+Cascadng fail
+Patter super critical
+
+Pattern 3 : Mixed
+
+
+*******************************************
+Circuit Breaker
+*******************************************
+
+Release ItDesign And Deploy Production-Ready Software , Michael T.Nygard
+
+GoodBye Demo
+
+
+*******************************************
+Pipeline
+*******************************************
+ 
+ 
+*******************************************
+Authentication
+*******************************************
+Keycloak
+
+
+*******************************************
+Logging, Monitoring , Tracing
+*******************************************
+Logging
+	ElasticSearch => Store that gathere all logs 
+	FluentD => Gather Logs from Nodes and feed them to Es
+	Kibana => Web Ui for ES
+	
+Monitoring
+	Heapster
+	Hawkular
+	Cassandra
+	
+	minishift --metric start
+	
+Tracing
+	Zipkin
+	Jeager
+	Opentracing.Io
+	
+
+*******************************************
+Blue-Green Deployment
+*******************************************
+Rollback mecanism
+
+*******************************************
+Canary Deployment
+*******************************************
+Same as Blue Green but take a fraction of the audience, grow and if everything is OK , say GO !!!!
+
+
+*******************************************
+Summary
+*******************************************
+Advacned Topic = DDD
+Commuinication: Http 1 , 2 AMQP, gRPC
+Feature Toggle : Same as canry but not for the entire Soft, on ly for a tiny labelled features
+A/B testing: metric de perspection business pour savoir si c'est mieux ou moins bien qu'avant
+
+
+
+
+
+
+	
+	
+
+
+
+

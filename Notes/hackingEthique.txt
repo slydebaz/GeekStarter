@@ -1,0 +1,164 @@
+**** Deception ****
+Cacher des liens dans les sytems.
+Laisser trainer des liens sur un systeme pour que la personne qui clic dessus soit découverte.
+Cela va générer une notification
+
+https://iplogger.org/
+https://grabify.link/
+https://webresolver.nl/tools/iplogger
+
+*******************************************************************************
+Les 4 piliers 
+
+Confidentiel = emetteur destinataire sont les seuls a avoir acces au message => chiffrage du contenu
+
+chiffrage avec crypto avec clé public
+
+public => chiffrage
+privée => dechiffrage
+
+Authenticité = s'assurer de l'authenticité du destinataire
+Etre certain que le message aura été seulement lu par le destinataire
+
+=> certificats qui vont signées la clé publique fournit par un tiers
+
+Intégrité = s'assurer que le message envoyé n'a pas été modifié avant d'arriver.
+=> fonction de hachage ajoutée au message pui recalculé par le destinataire. Si il y a matching alors OK
+
+
+disponibilité = l'information doit etre disponible quand on en a besoin.
+
+non repudiation => ne pas nier la reception d'une info et ne pas avoir envoyée une info
+
+Ex: SMTP, HTTPS
+
+*******************************************************************************
+Approches basée sur les risques
+Identifier
+Protéger 
+Detecter
+Repondre
+Guerir
+
+Stratégies: 0 trust ou défense en profondeur
+
+
+
+*******************************************************************************
+Paramétrage environnement
+
+VM: reseau => connexion par pont
+   promiscuite => allow all
+
+
+
+kali // kali
+
+sudo dpkg-reconfigure locales
+
+reboot
+
+ping 8.8.8.8
+
+*******************************************************************************
+
+Pour Securiser une infra, un reseau ou 
+Tester les identifiants (utiliseateurs et admin des systemes)
+Tester un nouveau service
+Tester le personnel
+
+
+Différents type de test d'intrusion: Web, reseau, mobile
+
+Intrusion en boite noire:  sans connaitre ce qu'il y a dans le systeme
+Intrusion en boite blanche: on obtient des infos sur l'entreprise afin d'avoir des angles d'attaque
+Intrusion en boite grise: on a accès a queles elements et on s'en sert poru faire quelque chose de specifique
+
+
+
+*******************************************************************************
+
+5 phases d'intrusion
+
+1. Reconnaissance
+	active si on cherche des infos par dessus l'épaule
+	passive ou on essaye des recupartion sur internet
+	etape la plus facile mais aussi la plus longue
+2. balayage reseau
+	recuperer des details sur les systeme
+	qu'est ce qui se trouve sur les syteme identifies: ports, CVE
+3. accès aux machines
+	accès au syteme
+	faiblesse exploitée
+4. maintenir l'accès
+	facilter son accès: une backdoor
+5. couvrir les traces
+	detruire ses preuves: fichier logs d'activités
+	un white hack on va chercher a detecter les suppression des logs
+
+
+*******************************************************************************
+Reconnaissance
+
+=> en apprendre le plus possible
+Peut prendre plusieurs mois
+Footprinting : quelles technologies sont en place
+Récupère les informations de plus en plus précises
+Les sources: whoisi, mention legeles, communiqués de presse, @Ip,  technos
+Hors ligne:
+	dumpster diving: faire les poubelle
+	shoulder surfing: regarder par dessus l'epaule d'une personne, sur son smartphone
+	eavesdorrping: ecouter aux portes
+	
+***************************	
+Google Hacking => trouver des infos sur une cible
+fileype, inurl
+
+=> trouver du contenu qui ne devrait pas etre public
+
+
+google hacking database  => GOOGLE DORKS
+https://www.it-connect.fr/google-dorks-google-hacking-exploiter-toute-la-puissance-de-google/
+
+
+
+site:www.leblogduhacker.fr intitle:index of
+
+https://www.exploit-db.com/
+
+
+***************************
+Recherche inversée d'image
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

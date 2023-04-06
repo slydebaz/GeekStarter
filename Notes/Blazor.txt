@@ -1,0 +1,674 @@
+***********************************************
+Reference
+***********************************************
+
+Mozilla defines WebAssembly, or WASM, as a "low-level assembly-like language that provides near-native performance that allows other languages to run on the web."
+
+Blazor Native
+https://itnext.io/blazor-and-native-mobile-apps-9177c5a6488b
+
+Blazor Hybride (Beta) => Blazor Desktop App
+https://devblogs.microsoft.com/dotnet/hybrid-blazor-apps-in-mobile-blazor-bindings-july-update/
+
+Podcasts
+
+WASM + Blazor 
+http://devapps.be/podcast/blazor-webassembly
+
+Les nouveautés Blazor
+https://devapps.ms/podcast/blazor-webassembly-released
+
+
+Build iOS from CLI
+https://docs.microsoft.com/en-us/xamarin/ios/get-started/installation/windows/connecting-to-mac/
+
+Mozilla defines WebAssembly, or WASM, as a "low-level assembly-like language that provides near-native performance that allows other languages to run on the web."
+
+
+CanIUse
+https://caniuse.com/wasm
+
+***********************************************
+Presentation
+***********************************************
+Objectif : Générer des interfaces graphiques
+développer des SPA
+
+C# de bout en bout:
+Reaction aux event => C# coté back/front
+
+
+Concurrent aux Framework Js: react, Vue, angular, Svelte
+
+basé sur ASP.net core => Une application console qui va executer un server Kestrel
+
+2 types d'apps
+
+***********************************************
+Blazor Server
+
+Variante de blazor
+Code executé sur le server
+Communication Client/ Server => SignalR.
+
+BackEnd site Web / composant en ASP, rendu des page depuis le serveur.
+FrontEnd : client Js téléchargé sur le client qui fait le binding.
+
+***********************************************
+Blazor Client (WebAssembly)
+
+composant + Runtime .Net => package qui va s'excuter sur le poste client
+Standard WebAssembly => voir standard W3C
+
+Executer du code dans le navigateur si le code respecte le standard WebAssembly
+L'application fonctionne dans le navigateur => Pas de pont SignalR
+
+***********************************************
+Quoi choisir ?
+
+
+Server:
++ Client léger
++ Code Sécurisé
++ Stack ASP bien outillée
++ API total
+- Sollicitation Serveur
+
+Client
+- Client plus lourd car embarque le runtime
+- Execution dans une sandbox, connexion à un autre PC 
+- Code 100% Dl chez le client
++ Mode deconnecté
++ Hebergement simplifié , possible d'utiliser une gestion statique
++ API: Ouverture à d'autres technos.
++ Si bcp de users=> autant limiter les besoins au serveur
++ Possibilité de PWA
+
+Partir sur la solution serveur n'empeche pas la migration vers WebAssembly
+
+***********************************************
+Creation du projet
+***********************************************
+***********************************************
+Installation via CLI
+
+dotnet --version
+dotnet new blazorserver --no-https
+
+***********************************************
+Execution
+
+dotnet run
+
+***********************************************
+***********************************************
+Syntaxe
+
+commentaire 
+@* *@
+
+Dclaration de variable
+@code{
+	int currentCount ! 0;
+
+} 
+
+Affichage
+<p>@currentCount</p>
+
+Evenement d'un bouton
+<button @onclick="@IncrementCount">Bouton</button>
+
+@code{
+	void IncrementCount() { currentCount ++;}
+} 
+
+@onclick"@(() => IncrementCount())"
+
+
+
+***********************************************
+***********************************************
+Structure du projet:
+
+Tous les projet ASPNetCore sont sur la meme structure: MVC , Web API ou RazorPage => Program.cs et StartUp.Cs
+
+Application ASP.Net core = application console qui lance un serveur kestrel
+
+
+
+IoC => Startup / HostBuilder / ConfigurationService
+
+
+AddRazorPages() => Possiblité de créer des page Razor 
+AddServerSideBlazor() => Ajoute tous les services qui permettent de gérer les services Blazor liés à la version serveur
+
+Pipeline Middleware => Configure() => la requete entre et passe par toutes ces étapes là
+
+UseStaticFiles : CSS , Js
+UseRouting
+UseEndPoint => MapBlazoHub => WebSocket via pont SignalR
+			=> MapFallbacktoPage => page par defaut
+
+
+
+Les .razor sont les composants des app blazor
+
+=> _import.razor contient tous les using communs
+=> App.razor => composant principal
+=> Pages/_Host.cshtml body head, etc....bref classique
+	=> si on doit ajouter des ressources alors c'est ici
+	=> @page permet de définir la route à laquelle on peut acceder à la page "/" qui indque la route par défaut
+	=> @namespace permet de définit le naspace de la page
+	=> @ {} = instruction C# sur plusieurs lignes
+		=> Layout= null. Facon de créer un theme et des elements communs. Sur la page de base on specifie que le layout  est nul
+		=> blazor.server.js  => client js => faire les appels serveur et recuperer les bouts de code via les appels SignalR
+		=> <component type="typeof(App)" 
+			render-mode="ServerPrerendered" /> => plusieurs type de rendu => App.Razor
+			App fait référence à Razor
+			
+
+
+
+
+
+
+
+***********************************************
+Routing
+
+App.Razor  contient le router
+=> le router doit aller chercher les composants qui matchent la route dans le projet
+=> Context contient les données de la route et sont passées au layout
+=> <found> <notfound>: est ce que la balise a été trouvée ou pas
+=> DefaultLayout = le pour tour => test a faire sans preciser le layout
+=> Appel d'un composant <NavMenu /> Href="couter" => composant Counter.razor (@page "/counter")
+
+Le contenu de la page sera injecté à la place de <component></component>
+
+
+***********************************************
+MainLayout
+
+Le Layout va permettre de définir ou sera intégré le contenu des pages
+
+Shared/
+	=> contient les composants communs
+
+@body = composant qui va etre injecté dans le HTML
+        :doit hérité de LayouComponentBase
+
+
+On utilise les composants comme des balises , un peu comme en React
+
+***********************************************
+les parametres de route depuis URL 
+
+@page "/counter"
+@page "/counter/{value}"  <= Attention ce ne sont que des string
+
+[Parameter] <= permet de mapper le parametre de la toute a la propriete 
+public int Value {get; set;}
+
+=> mapping avec [Parameter] => dis a Blazor, tu peux me voir depuis la route"
+
+@page "/counter/{value}"  <= Attention ce ne sont que des string
+
+Fix: @page "/counter/{value:int}"
+
+Nouveaute .Net5 route facultative
+ @page "/counter/{Init:int?}"
+
+ https://docs.microsoft.com/en-us/aspnet/core/blazor/fundamentals/routing?view=aspnetcore-6.0
+
+
+***********************************************
+***********************************************
+Separation Vue/Code
+***********************************************
+
+Comment separer le code de la vue.
+Une composant = Une classe qui porte le nom du composant
+2 méthodes 
+
+Méthode 1: CodeBehind (similaire au Xaml !!!!)
+=> class Partial
+Counter.razor => Counter.razor.cs 
+
+
+Méthode 2: Heritage => Separation Vue du Code Behind
+=> classe héritée de CounterBase : ComponentBase  <= Attention pas de constructeur avec parametre
+=> passer les propriétés public => protected
+@inherits CounterBase
+
+
+***********************************************
+***********************************************
+Cycle de Vie
+***********************************************
+OnInitialized => meilleur endroit pour charger de la données
+			 => permet aussi d'avoir accès à la valeur initiale des parametres
+Ex du Loader. Si on a une prop IsBusy, il ne suffit pas de changer la valeur pour que cela se repercute sur l'IHM
+Il faut signaler que l'état du composant à changer et qu'il faut refaire le rendu
+=> Executer StateHasChanged() sur le threadUI => InvokeAsync(StateHasChanged)
+
+OnParameterSet  => Appelé à chaque fois qu'un paramètre est mis à jour 
+				=> Utiliser [parameter] pour définir une props sur le composant
+				=> Si les paramètres viennent de l'url alors pas nécessaire de passer par OnParameterSet
+				=> pratique pour faire passer des parametre d'un composant vers un autre et rafrachir le composant cible.
+Il faut commencer à avoir une hierarchie de composant
+Utile seuelement si il y a un transfert d'info du parent vers l'enfant
+
+OnAfterRender => Méthode appelée pour dire que le composant et son contenu a été chargé: interoperabilité avec Js
+			  =>(firstRender) = première fois que le composant est rendu
+Js manipule le DOM et Blazor manipule le DOM => s'assurer que tout est pret avant de faire quoique ce soit
+
+ShouldRender => Jamais appelé lors du premier rendu
+			 => Renvoi true si le composant doit etre rafraichit
+			 => permet donc de définir des conditions particulière pour dire si le rendu doit etre refait ou pas
+			 => !!! attention aux performances du code !!!
+			 => on a pas de version Async car ca n'a pas de sens, on a besoin d'etre synchrone à ce moment là
+			 
+SetParameterAsync => Appelé juste apres la creatino du composant
+				  => Très rare d'avoir besoin de modifier ca.
+				  => On peut mannipuler entierement le composant à partir de là 
+				  =>  arameterView : collection de parametre inject& par le parent dans le rendertree
+				  => englobe le OnInitialized et OnParameterSet
+				  => c'est lui le chef d'orchestre !!!
+			
+				  
+Dispose => Une fois qu'on quitte la page, les composants sont nettoyés (IDispoable/IAsyncDisposable)
+		=> !!! Ne doit pas faire d'exception ET doit être rapide !!!
+		=> bonne pratique pour eviter les fuites memoires
+		
+BuildRenderTree => Cré l'arbre de rendu du DOM HTML
+				=> Permet de créer du HTML a partir du code
+				=> On peut donc générer dynamiquement le contenu du DOM. C'est le cas du NavLink
+				=> Redéfinir le DOM a partir de certains paramètre contextuels de mon composant
+				=> builder.OpenElement : definit la sequence des element html a creer
+				=> builder.AddAttribute definit les attributs
+				=> builder.AddContent : ajoute le contenu
+				=> builder.CloseElement : ferme la balise
+				=> migrer le code BuildRenderTree dans un composant a part
+
+***********************************************
+***********************************************
+Injection de dependance
+***********************************************
+Par defaut @inject WeatherForecastService ForecastService
+
+La syntaxte Razor devrait etre dédiée à l'affichage.
+On pourrait se dire que tout ce qui est @ quelque chose est fait pour de l'affichage des pages Razor
+Si on a @Inject alors on peut directement utiliser le service et ca c'est moyen
+
+Préférer remplacer par 
+
+[Inject]
+protected WeatherForcastService ForecastService {get; set;}
+
+=> Voir Startup.cs 
+	. ConfigureServices / AddSingleton
+ 
+ => avec Blazor les composants exploitent des constructeurs sans paramètre 
+ => donc pas possible de faire de l'IoC en passant les dépéndances dans le cosntructeur
+ => solution: IoC par propriété (Ioc du pauvre ^^)
+ 
+***********************************************
+***********************************************
+Binding
+***********************************************
+One Way => composant  => Vue
+***********************************************
+=> Afficher une donnée a l'ecran
+
+
+***********************************************
+Binding => utilisation de @ @()
+
+Binding sur Propriete: @Color
+Binding sur Methode: @onclick="IncrementCount"
+
+<button class="btn btn-primary" style="color: @Color"  disabled="@(CurrentCount => 20) @onclick="IncrementCount">Click me</button>
+
+Binding sur Event via Methode ou Lambda:
+onclick=MaMethode ou onclick="() => MaPropriete ++"
+
+Blazor pas d'argument contrairement aux Handlers en WPF
+
+***********************************************
+Two Way => Vue  => composant
+***********************************************
+Je veux un binding dans les 2 sens cablé sur cet élément.
+
+<input type="number" @bind-value="maPropriete"/>
+@bind-value permet de binder directement sur l'attribut value du composant
+
+@bind="maPropriete" même chose mais seulement destiné sur de l'affichage simple et non pas des composants qui permettent la saisie et qui possède l'attribut value
+
+un equivalent aurait été :
+<input type="number" value"@initial" @onchange= @bind="@maPropriete"/>
+
+<Counter InitialCount="@maPropriete" />
+
+@code{
+	private int maPropriete
+}
+
+Fonctionne sur un élément modifiable par un utilisateur
+
+Pour que la fenetre soit mise a jour il faut cliquer en dehors de la zone de saisie
+
+=> pas très dynamique
+
+On doit sortir de la zone de saisie pour que la valeur saoit prise en compte. C'est a ce moment qu'on peut effectuer des controles.
+
+format et culture principalement pour les date, les autres formats ne sont pas encore trop pris en charges
+-> attention performance car beaucoup de com avec le serveur
+
+<input type="number" @bind-value="maPropriete" @bind-value:event="oninput"/>
+
+@bind-value:event="oninput" Permet de dire que le binding se fasse sur le oninput
+
+Note: Penser à utiliser le format type=Date pour bénéficier de ce que le navigateur fournit
+
+***********************************************
+Routing Event
+***********************************************
+Gestion du Bubbling: StopPropagation permet d'éviter de propager l'evenemnt dans les composants parents
+
+<button class="btn btn-primary" 
+style="color: @Color" 
+disabled="@(CurrentCount => 20) 
+@onclick="IncrementCount"
+@onclick:stopPropagation="true"
+>Click me</button>
+
+***********************************************
+PreventDefault: Ex empecher l'affichage du "+" lorsque l'on incremente le compteur en appuyant sur le bouton "+"
+
+<input type="number" 
+@onkeypress="KeyPressed"
+@onkeypress:preventDefault="true"
+@bind-value="maPropriete" 
+@bind-value:event="oninput"/>
+
+@code{
+	private int maPropriete
+	
+	public void KeyPressed(KeyboardEventArgs e){
+		if(e.Key == "+")
+		{
+			maPropriete ++;
+		}
+	}
+}
+
+***********************************************
+Formulaires
+***********************************************
+using System.ComponentModel.DataAnnotations
+
+Habituellement on utilise des balises form pour la validation des formulaires
+On a également un binding qui permet de stocker automatiquement les valeurs dans le modèle
+=> Compromis <EditForm> = equivalent de la balise form mais dédié à la validation de formulaire
+<EditForm OnValidSubmit="Validate" Model="Client">
+	<DataAnnotationsValidator/>  <= Permet de faire appel aux paramètres de controle
+</EditForm>
+
+
+[required]
+[required, RegularExpression("^[0-9]*$)"]
+[required, StringLength(MinimumLength = 1]
+[required, RegularExpression("^[0-9]{5}$)"]
+[required, ErrorMessage("Mon Message à moi"]
+
+Transformer les <Input> en <InputText>
+
+N.B: il existe de nombreux composants Blazor qui "remplace" les composants HTML en prenant en compte le contexte
+
+Ajouter des validationMessaget
+	<ValidationMessage for"() => Client.Name" />
+	
+	
+	Personnalisation possible des messages d'erreur dans les decorateurs : [required(ErrorMessage = "Mon nouveau message"]
+	
+	
+***********************************************
+Navigation
+***********************************************	
+
+Dans NavMenu on a de la navigaotion par interacation avec l'IHM
+On peut avoir besoin de naviguer par le code
+
+=> NavigationManager 
+
+[Inject]
+public NavigationManager Navigation {get; set;}
+
+Navigation.BaseUri
+Navigation.Uri
+Navigation.NavigateTo("/targetUrl", forceLoad)
+
+forceLoad => on rafraichit toute la page
+
+
+***********************************************
+Interop avec Js
+***********************************************
+
+***********************************************
+Appel Js depuis C#
+
+Le Js doit etre invoqué lorsque le DOM est completement chargé => OnAfterRenderAsync
+
+IJsRuntime permet d'appeler du Js.
+
+[Inject] protrected IJSRuntime JsRuntime {get; set;}
+
+Ou mettre le code J:
+* Fichier Host.cshtml 
+	<script type="text/javascript"> 
+	
+	Il me faut un objet global => windows
+	
+	window.displayAlert = (n) => {}
+	window.askInitial = () => { return number } 
+
+
+void IncrementCount => async Task IncrementCount()
+{
+	await JsRuntime.InvokeVoidAsync("displayAlert", currentCount)
+
+}
+
+LA communication Js => Blazor = JSON
+
+await JsRuntime.InvokeAsync<string>("askInitial")
+Important: il faut mettre a jour l'etat du composant avec StateHasChanged() car on est dans le OnAfterRenderAsync et que le rendu est deja effectué
+
+***********************************************
+Appel C# depuis Js
+
+[JSInvokable]
+public async Task IncrementByThree()
+{
+	currentCount += 3
+	await InvokeAsync(StateHasChanged)
+}
+
+Important. Untrusted Callers
+Blazor cree un context d'exec securisee mais depuis le Js ce n'est pas la meme chose.
+Dans un navigateur avec les Devtools et la methodfe en question puet alors etre invoquée
+Imaginons que la methode C# manipule une BDD , il faut alors se proteger contre les injection SQL => considérer que les donénes provenant du client ne sont pas fiable 
+
+<button onclick="Increment3()">Increment 3</button>
+
+=> ca ne suffit pas car il nous faut conaitre l'objet sur lequel on peut appeler cette methode là
+=> creation d'une reference dans OnAfterRender
+		var thisRef = DotNetObjectReference.Create(this);
+	    await JsRuntime.InvokeVoidAsync("storeCoutnerComponent", thisRef)
+
+=> maintenant il faut que Js connaisse cette reference
+
+let counterComponent
+window.storeCoutnerComponent = (ref) => {
+		if(ref){
+			counterComponent = ref;
+		}
+
+}
+function Increment3()
+{
+  if(coutenrComponent){
+		coutenrComponent.invokeMethodAsync('IncrementByThree')
+  
+  }
+}
+
+
+***********************************************
+Creation d'un composant reutilisable
+
+loading.io/css
+
+1. Creation d'un fichier css associé au composant => Loader.razor.css
+
+_Host.cshtml <link href="MyApp.styles.css" rel="stylesheet"/> est généré automiatiquement dès qu'il y a un razor.css embarqué dans l'app. regroupement de tous les css
+
+
+
+
+
+***********************************************
+Creation un composant two way bindable
+
+1.creation fichier razor WeatherTable
+
+@code{
+	[Parameter] public WeatherForecast[] Forecasts 
+	{
+		get
+		{
+			return _forecasts;
+		}
+	
+		set{
+			_forecasts = value;
+			_ = forecastsChanged.InvokeAsync(value);
+		}
+	}
+	[Parameter] public EventCallBack<ForecastsChanged[]> ForecastsChanged {get; set;}
+}
+
+<WeatherTable @bind-Forecasts="forecast"></WeatherTable>
+
+private WeatherForecast[] forecasts;
+
+
+
+N.B EventCallBack au lieu de Action qui ne permet pas de faire remonter l'information au parent qu'il doit etre rafrachot depuis l'enfant
+
+
+***********************************************
+***********************************************
+Communication http
+
+2 Facons: 
+- HttpClient avec Scoped mais on aura une erreur a l'execution
+- On remplace Scoped par AddHttpclient dans ConfigureService
+services.AddHttpClient<IWeatherForecastService, HttpWeatherForcastService>((serviceProvider, client) => {
+	client.BaseAddress = new System.Uri("http://localhost:6000");
+});
+
+***********************************************
+Paramétrage de l'url
+
+
+appsettings.JSON
+appsettings.Development
+"Api": {
+	"Url": "http://monserver.com/forecasts"
+}
+
+
+N.B ce fichier est bindé sur la variable d'environnement ASPNETCORE_ENVIRONMENT (voir Propriete projet Deboguer)
+
+Pour accéder à  ette config dans le programme: 
+Dans Startup.cs on a IConfiguration
+
+services.AddHttpClient<IWeatherForecastService, HttpWeatherForcastService>((serviceProvider, client) => {
+	client.BaseAddress = new System.Uri(Configuration["Api:Url"]);
+});
+
+Remarque: l'usage de "Api:Url" n'est pas très propre ("magic string")
+
+1. creer une classe ApiOptions avec une propriété Url (meme nom que la version Json)
+2. Dans ConfigureServices
+2.1 ajouter services.AddOptions()
+2.2 services.Configure<ApiOptions>(Configuration.GetSection("Api"))
+3. 
+services.AddHttpClient<IWeatherForecastService, HttpWeatherForcastService>((serviceProvider, client) => {
+	var options = serviceProvider.GetRequiredService<IOptions<ApiOptions>>();
+	client.BaseAddress = new System.Uri(options.Value.Url);
+});
+
+
+***********************************************
+Resilience HttpClient
+Utiliser Microsoft.Extension.Policy
+
+Appliquer une strategie de resilience sur le httpResponseMessage
+
+
+private IAsyncPolicy<HttpResponseMessage> GetHttpPolicy()
+{
+ 	return HttpPlicyExtensions
+	 	.HandlerTranscientHttpError()
+		.WaitAndRetryAsync(5, retry => Timespan.FromMilliseconds(200 + (retry * 150)))
+}
+
+services.AddHttpClient<IWeatherForecastService, HttpWeatherForcastService>((serviceProvider, client) => {
+	var options = serviceProvider.GetRequiredService<IOptions<ApiOptions>>();
+	client.BaseAddress = new System.Uri(options.Value.Url);
+}).AddPolicyHandler(GetHttpPolicy())
+
+***********************************************
+***********************************************
+Cascading value
+
+Passage de paramètre des parents aux enfants 
+Organisation hierachique des composants donc la solutions simple serait de passer les paramètres en arguments des composants
+
+=> Faire descendre une valeur en cascdae sans se reposer sur le passage des arguments
+
+
+Dans Counter.razor
+
+<CouterSquare Value="InitialCount"></CouterSquare>
+
+Dans CounterSquare.razor
+[CascadingParameter] public int Value {get; set;}
+
+
+Dans Counter.razor
+=> <CouterSquare></CouterSquare>
+
+[CascadingParameter] public int InitialCount {get; set;}
+[CascadingParameter(Name = "Count")] public int InitialCount {get; set;}
+
+Dans CounterParent.razor
+
+<CascadingValue Value="initVal">
+	<Counter></Counter>
+</CascadingValue>
+
+<CascadingValue Value="initVal" Name="Count">
+	<Counter></Counter>
+</CascadingValue>
+
+
+N.B le lien est fait suivant le type du paramètre si on à un seul paramètre mais on peut asussi nommer le paramètre
+
+***********************************************
+***********************************************
+Nouveaute .Net5

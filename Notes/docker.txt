@@ -1,0 +1,441 @@
+
+*****************************************************************************************************************************************************
+Un Container c'est quoi ?
+
+C'est juste un process
+
+=> lister les process sur la machine
+ps aux 
+
+*****************************************************************************************************************************************************
+Creating and Running Container
+
+
+1. chercher un image locale
+2. si rien alors va chercher sur le registry hub
+3. teclecharge la derniere version par defaut
+4. cré un nouveau container basé sur cette image
+5. donne une @IP virtuel sur un reseau privé dans le moteur docker
+6. Ouvre le pour 80 sur le host et forward sur le 80 du container
+7. Demarre un container en utilisant un command mentionnée dans le docker file
+
+Demarer une nouvelle isntance => nouveau sha1 a chaque fois
+docker container run --publish 80:80 --detach nginx
+
+--detach => run cotnainer en arriere plan
+
+History: le nom des containers est créés a partir d'un liste d'ajectif et de scientifiques/hackers celebres
+
+
+=> Lister les process d'un container
+docker container top <container_name>
+
+=> lister les containers
+docker contrainer ls -a
+
+
+=> suprimer les containers
+docker container rm <not_runnning_container_id>
+
+=> forcer la suppression des container
+docker container rm -f <not_runnning_container_id>
+
+
+=> passer une variabled'env au container
+-- env MY_VAR=<value>
+
+=> voir les logs d'un container
+docker container logs <container_name>
+
+
+*****************************************************************************************************************************************************
+Inspection
+
+=> Regarder la config d'un container
+docker inspect <container_name>
+
+=> regarder les performances des containers
+docker container stats 
+
+Lister les process d'un container
+=> docker container top
+
+Lisre une propriété d'un container
+docker container inspect --format '{{ .NetworkSettings.IPAddress }}' <container_name>
+
+
+*****************************************************************************************************************************************************
+Interagir
+
+=> Demarrer un nouveau container interactivement
+docker container run -it <container_name>
+
+=> Executer des commandes dans un container existant
+docker container exec -it <container_name>
+
+
+
+*****************************************************************************************************************************************************
+Networks
+
+"Bridge" ou "docker0" est le network par defaut
+"overlay" pour swarm
+Chacun des reseaux srot par le firewall et revient
+Tous les containers d'un meme reseau peuvent parler ensemble directement
+
+Best Practices
+Creer un nouveau reseau pour chaque application
+
+=> exposer un port d'un container
+docker container run -p
+
+=> recuperer le port d'un container
+docker container port <container_name>
+
+=> Lister les network
+docker container ls
+
+=> Inspecter un network
+docker network inspect
+
+
+IPAM {} permet d'obtenir la gateway qui route vers le reseau physique
+
+=> Créer un network
+docker network create --driver
+
+=> Attacher un network a un container
+docker network connect
+
+=> Detacher un network d'un container
+docker network disconnect
+
+--link permet de lié manuellement un container à un network
+
+N.B 'host" network attache directement le container sur le reseau physique 
+
+docker container run -d --name <container_name> --network <network_name> <image_name>
+
+
+**********************
+Round Robin
+
+docker network create dude
+docker container run -d --net dude --net-alias search elasticsearch:2
+docker container run -d --net dude --net-alias search elasticsearch:2
+
+
+docker container run --rm --net dude alpine nslookup searh  => wil run nslookup entry on the dns search and exit
+docker container run --rm --net dude centos curl -s search:9200 nslookuup searh
+
+*****************************************************************************************************************************************************
+Images: 
+
+Definition: dependendaces et fichiers binaires d'application 
+Dans une image il n' yh a pas d'OS ou de kernel, c'est l'hote qui founir tout ca. C'est la diff principale avec une VM
+
+Clean: (=> 1.13)
+=> nettoyer les images qui ne sont pas utilisées
+docker system prune
+=> nettoyer tout
+docker image prune -a
+
+
+=> Voir l'espace disque associé à une image 
+docker system df
+
+Nommage:
+
+<oganisation>/<imageName>
+celle sans nom sont les officielles
+
+Tags:
+Latest et le tag par defaut.
+docker image tag <tagname> <image> 
+=> ajouter un tag
+docker image tag <image><tagname> <new_image>:<new_tag> 
+
+Builder une image:
+chaque command RUN deviendra une couche de l'image. penser  a fusionner les commande de ploiment de package avec des &&. Gain de place et de temps
+&& => execute la commande suivante uniquement si la premiere est un succes
+; => execute la commande suivante quoiqu'il arrive
+docker image build -t <tag> . 
+
+utiliser WORDIR pour mieux dev=crire ce que vous faite au lieu de CD
+
+
+Docker ets lié au syslg de linux alors penser a faire un 
+RUN ln -sf /dev/stdout /var/log/<image>/access.log
+&& ln -sf /dev/stderr /var/log/<image>/error.log
+
+
+Pousser une image:
+Il faut se logguer.
+Par defaut ca va sur docker.hub
+
+Conception:
+Une image est decomposées en couche qui ont chacune un sha1
+Un cache existe et permet de maximiser la reutilisation du cache 
+
+=> Lister l'historique des couches 
+docker history <imgage>:<tag>
+
+Chaque modif sur le filesystem qui arrive ajotue une couche
+
+=> Inspecter la configuration d'une image:
+ports exposés
+commandes
+vairiables d'environnement
+
+
+
+*****************************************************************************************************************************************************
+Volumes:
+
+Dans la partie "Mount": il y a le mapping entre l'endroit ou se trouve physiquement les données : source
+et le path dans le container
+
+
+****************************************
+Named volume
+
+=> creer un volume
+docker container run -d --name <container> -e <env_var>=<value> -v <path> <image_name>
+
+Il peut etre difficile de savoir quel volume est associé à tel ou tel container => utiliser des alias pour les volumes
+
+=> creer un volume nommée
+docker container run -d --name <container> -e <env_var>=<value> -v <named_volume>:<path> <image_name>
+
+****************************************
+Bind mount
+
+Mapping file host to container 
+
+
+(mac/linux)
+
+...run -v /Users/bret/stuff:/path/container
+
+(windows)
+
+...run -v //c/Users/bret/stuff:/path/container
+
+
+
+docker container run -d --name <container_name> -p 80:80 -v $(pwd):<path_image> <image_name>
+
+
+****************************************
+Docker Compose
+file version: min 2  => 3.1
+
+=> setup and start all containers/vol/net
+docker-compose up 
+
+=> setup and start all containers/vol/net et build à la volée
+docker-compose up --build
+build .
+
+Utiliser la commande build dans le docker-compose file
+
+N.B le nom du container apres un compose-up sera préfixé du nom du repertoire qu'il contient
+DNS: docker compose-up build automatiquement un network par defaut. le nom du service est utilise comme DNS
+
+
+=> setup and start all containers/vol/net en arriere plan
+docker-compose up 
+
+=> stop all containers and remove cont/vol/net
+docker-compose down 
+
+=> stop all containers and remove volume
+docker-compose down -v
+
+=> stop all containers and remove local image
+docker-compose down --rmi local
+
+=> lister les containers en cours
+docker-compose ps 
+
+=> lister les process
+docker-compose top
+
+=> afficher les logs
+docker-compose logs
+
+N.B 
+Cache: penser a noettyer le cache dans les commandes RUN
+Git: penser a recup uniqument le dernier commit et pas tout l'historique avec la commande--single-branch --depth 1 
+Use: utiliser les bons credentials chwon -R <user>:<group> <working_file>
+
+
+*****************************************************************************************************************************************************
+SWARM:
+
+Built in solution inside docker for orchestration
+
+Deux types de noeud: managers / worker
+Manager Node:
+Les mangers peuvent etre des workers: attention bonnes pratiques
+Ils ont une DB local: Raft database avec un protocole qui garantie la consistence de l'essaim
+Ils stockent les information qu'il faut pour etre identifiés comme authorité au sein de l'essaim
+chaque noeud à une copie de la Raft.
+Leur communication est cryptée 
+Chacun de ces noeuds peut etre un VM, une machine
+
+
+Prise en charge d'une commande SWARM:
+
+docker service create
+
+La stack suivante a pour objectif de determinier ce qui doit etre fait au sein de l'essaim et de dire aux workers ce qu'ils doivent executer
+
+API: accpets command form client and creates service object
+Orchestrator: reconcialliation loop for service objects and creates tasks. Reconciliation: gestion de ce qui doit etre fait par rapport à ce qui est en cours
+Allocator: Allocates IP addresses to tasks
+Scheduler: Assigns nodes to tasksDispatcher: Checks in on workers
+
+
+=>  demarrer SWARM
+docker swarm init 
+
+docker swarm init --advertise-address <ip_adress>
+
+.Creation certificat pour l'essaim
+.Le certificat est fournit par le premier noeud
+.un token est généré pour permettre à d'autre noeuds de rejoindre l'essaim
+
+=>  Lister les noeuds 
+docker node ls
+
+=>  Creation d'un service
+docker service create <image> <command> <commande_args>
+docker service create alpine ping 8.8.8.8
+
+=>  Lister les services
+docker service ps
+
+=>  Lister les services d'un service specifié
+docker service ps <service>
+
+docker service ps
+
+=> afficher le token 
+docker swarm join-token manager
+
+=> rejoindre un essaim
+docker swarm join --token <token> <ip_adress:port>
+
+=> creation d'un network
+docker netwrok create --driver overlay <image>
+
+=> Routing Mesh
+La creation d'un service a entrainer la creatino d'un IP vitualle qui map sur le nom DNS du service
+Cett IP va servir a faire du Load blancing sur l'ensemble des noeuds
+
+L'avantage de cette technique par rapport a du round robin est qu'elle ne sollicite pas de cache. 
+C'est comme si il y avait une machine dedié&e a fair edu load balancing
+Cela reste du stateless balancing (OSI couche 3 TCP et pas couche 4 DNS) alors attentino si vosu avez besoin d'info persistente comme un tocket de session car vous pouvez switcher de noeud a chaque requete
+
+
+*****************************************************************************************************************************************************
+Registry
+
+=> Run the registry image
+docker container run -d -p 5000:5000 --name registry registry
+
+Re-Tag existing image and push it to your new registry
+docker tag hello-world 127.0.0.1:5000/hello-world
+docker push 127.0.0.1:5000/hello-world
+
+Remove taht image from local cache and pull it from new registry
+docker image remove hello-world
+docker image remove 127.0.0.1:5000/hello-world
+docker pull 127.0.0.1:5000/hello-world
+
+re-create registry using a bind mount and see how it stores database
+docker containe run -d -p 5000:5000 --name registry -v $(pwd)/registry-data:/var/lib/registry registry
+
+treeview
+
+linux=> tree
+apt/yum install treeview
+=> mac
+brew isntall treeview
+=> windows 
+already install
+
+=> save t file
+save image to file
+
+docker save -o ubuntu_image.docker ubuntu_image
+
+docker load -i ubuntu_image.docker
+
+
+
+******************************
+update
+
+C'est THE command
+elle permet de mettre à jour à chaud les containers
+
+=>  Scale up
+docker service update <sha1_service> --replicas <number_of_replicas>
+
+=> promouvoir un noeud
+docker node update --role manager node2
+
+******************************
+N.B: multipass https://multipass.run/
+multipass mount
+multipass transfer
+
+******************************
+play-with-docker.com
+
+******************************
+docker-machine
+
+docs.docker.com/machine/install-machine + Virtual Box (avec busy box)
+
+=> creation d'un noeud
+docker machine create node1
+
+=> accès à un noeud
+docker-machine ssh node1
+
+=> reconfigurer le terminal pour parler directement à un noeud
+docker-machine env node1
+
+eval $(docker-machine env node1)
+
+******************************
+Intaller docker
+
+get-docker.com
+curl -sSL https://get.docker.com/ | sh
+
+sudo usermod -aG docker <your_user>
+
+=> Tips: utiliser la comand native watch
+watch docker service ls
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

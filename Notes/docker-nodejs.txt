@@ -1,0 +1,249 @@
+
+1. Use COPY , not ADD
+ne pas utiliser ADD mais COPY car ADD fait beaucoup de chose comme telecharger, dezipper des fichiers, aller voir dans votre local directory .... side effects
+
+2. Clean cache --force after istall
+Image as small as possible
+
+3. use node and not NPM to launch process
+NPM a besoin d'un autre application pour fonctionner
+ajouter un niveau applicatif qui n'est pas necessaire
+En utilisant npm on va demarrer le process via un autre fichier
+
+NPM ne fonctionne pas bien comme process d'initialisation dans un container
+
+Un container = un process. On ne veut pas passer par une indirection
+NPM ne supporte pas les signaux de fermeture
+
+4. eviter d'utiliser CD ou MKDIR mais plutot WORKDIR
+N.B sauf si vous avez besoin de permissions speciale alors utiliser MKDIR
+
+
+5. Utiliser des images avec un version pair et non impair. Les versions pair sont des LTS major release
+6. ne pas utiliser :Latest tag ou les :slim :on build (qui utilise un principe d'heritage de dockerfile qui a la base avait pour but d'eviter d'avoir a creer un dockerfile. 
+		Dans les faits on ne sait pas trop ce qui se passe au build et on est pour ainsi dire toujours obliger de creer un dockerfile)
+7. les Debian sont assez pratiques pour commancer car elles continennent tout ce qu'il faut pour demarrarer et tout ce qui est apt manager fonctionne bien
+8. utiliser des image Alpine par la suite car les applications un peu complexes peuvent necessiter un peu de tunning
+8.1 CVE Scan fail with alpine https://www.youtube.com/watch?v=e2pAkcqYCG8
+
+
+******************************************************************************************
+Premiere image avec NodeJs
+
+
+Add User node avant CMD dans le dockerfile to activer un utilisateur non root
+
+FROM 
+
+ENV NODE_VERSION <node_version>
+
+Penser a rempalcer les &&  par de RUN pour le debug
+
+Par défaut on est root dans un container mais on reste isolé de l'hote
+
+LEs images node ont un user Node de definit mais pas actif par defaut
+
+=> Set user from root to node
+USER node
+
+Definit le user apres avoir faiut les apt/apk ou npm i -g car ces actions necessitent d'etre root 
+Peut necessiter chown <node_user><node_group>  chown node:node
+
+ex: WORKDIR va creer des dossier avec les permissions root et il faudra changer les accès manuellement
+
+ENTRYPOINT, RUN , CMD sont les seules commandes autorisées par le USER node
+
+=> set permissions on app dir
+
+RUN mkdir app && chown -R node:node .
+USER node
+RUN npm isntall && npm chache clean --force
+
+Ajouter un COPY avant le CMD qui lance votre app qui ira surement faire des ecriture et autres accès distants
+COPY --chown node:node . .
+CMD ["node", "app.js"]
+
+
+=> Run a command as root in containerdocker-compose exec -u root
+
+
+******************************************************************************************
+Optimisation
+
+1. choisir la bonne image
+2. attention à l'ordre des commandes
+Important: souvenez vous, chaque commande de votre docker file constitura une couche de votre image
+
+Pensez à mettre les instruction invariante le plus haut possible: EXPOSE <PORT>
+
+3. COPY twice
+Si un changement intervient dans un de vos fichiers sources et que vous faites le COPY avant le RUN npm alors vous gagnerez du temps
+ex: 
+
+RUN npm install && npm cache clean --force
+COPY . .
+
+COPY package.json package-lock.json* ./
+RUN npm install && npm cache clean --force
+COPY . .
+
+N.B mettre une '*' derriere un nom de fichier permettra de traiter le fichier si il est présent ou de faire sans si ce n'est pas le cas.
+
+4. Ne pas separer les commande apt-get et les executer au debut du fichier pour ne pas baser la suite sur des versions obsolètes
+
+******************************************************************************************
+Controlling node process in docker
+
+Un container vit tant que son process vit.
+si le process est terminé ou crash alors le container exit
+
+
+Tips: lister les containers instanciés y compris ceux qui sont stoppés
+docker ps -a
+
+problematique: Comment gérer l'état du container de manière propre suivant l'état de l'application
+nodemon, forever, pm2 ne sont plus necessaires, ils rajoutent un encapsluation de l'execution du process applicatif et ne permettent pas son pilotage.
+A utiliser uniquement en Dev
+
+Docker s'occupe de manager le process: app start, stop, restart, healthcheck
+
+npm et node ne repondent pas aux signaux de terminaison de process
+node par defaut n'y repond pas mais on peut le coder !!!
+
+PID 1 (Process Identifier)
+Init process in a container has two jobs:
+    kill zombie processes => not a big deal. Avec Node on aura souvent un process applicatif qui va lancer d'autres process
+    pass signals to subs-processes
+
+Handling shutdown. Si on ne gère pas bien la terminaison, le container peut mettre jusqu'a 10s pour se fermer.
+    C'est important en production notamment dans le cas de mise à jour docker
+    Docker utulise les signaux linux signals pour stopper l'app :
+     SIGINT : CTRL+C 
+     SIGTERM : docker stop, kubectl update / rolling udpate
+     SIGKILL : la méthode bourrin pour killer sans preavis un process
+
+Solution:
+Docker a un process built-in pour l'initilisation: tini (>= Docker 1.13)
+Souvent sur internet on conseille d'utiliser ce process mais c'est un workaround
+Ca peut etre bien si l'application qu'on a containerisé n'est pas la notre, qu'on ne veut pas ecrire du code dedans.
+Le mieux reste de le coder soit même.
+
+Les solutions:
+
+1.docker run --init
+docker run --init -d nodeapp
+--init executera tini qui est uen commande d'initialisation de process
+
+2.ajouter tini a votre image pour quelque chose de plus permanent
+RUN apk add --no-cache tini
+ENTRYPOINT["/sbin/tini", "--"]
+CMD["node", "./bin/www"]
+
+https://computingforgeeks.com/use-tini-init-system-in-docker-containers/
+
+N.B l'usage de ENTRYPOINT viendra wrapper l'appel fait dans CMD et permettra de fermer l'application properment (voir exemples ci dessous)
+
+3.implementer la capture des SIGINT pour sortir proprement et fermer vos connexions => !!! THE BEST PRACTICE !!!
+
+// quit on ctrl-c when running docker in terminal
+process.on('SIGINT', function onSigint () {
+  console.info('Got SIGINT (aka ctrl-c in docker). Graceful shutdown ', new Date().toISOString());
+  shutdown();
+});
+
+// quit properly on docker stop
+process.on('SIGTERM', function onSigterm () {
+  console.info('Got SIGTERM (docker container stop). Graceful shutdown ', new Date().toISOString());
+  shutdown();
+})
+
+// shut down server
+function shutdown() {
+  // NOTE: server.close is for express based apps
+  // If using hapi, use `server.stop`
+  server.close(function onServerClosed (err) {
+    if (err) {
+      console.error(err);
+      process.exitCode = 1;
+    }
+    process.exit();
+  })
+}
+
+
+
+la commande CMD définit la commande qui sera executée au démarrage
+CMD['nginx']
+CMD['mysql']
+CMD['bash']
+
+Par défaut Docker n'attache pas de terminal au container quand il est exécuté, donc si pas de bash en programme par defaut alors pas de programme executé =>  exit
+
+docker run ubuntu [COMMAND]
+
+docker run ubuntu sleep 5 => attend 5 secondes puis exit
+
+=> problématique: Comment faire en sorte d'executer le container systematiquement avec cette commande ?
+<= solution: utiliser CMD
+
+FROM ubuntu
+CMD sleep 5
+
+Plusieurs syntaxes
+
+CMD command param1				CMD sleep 5
+
+CMD ["command", "param1"]		CMD ["sleep", "5]  => valide
+								CMD ["sleep 5"]    => pas valide, les arguments doivent etre séparés
+
+Exemple avec une image ubuntu dont on souhaite retarder le demarrage avec la commande "sleep"
+
+docker run -t ubuntu-sleeper .
+docker run ubuntu-sleeper     => plus besoin de préciser les arguments d'execution
+
+=> problématique: Je souhaite quelque chose de moins statique et 
+<= solution: ENTRYPOINT
+
+FROM ubuntu
+ENTRYPOINT["sleep"]
+
+De cette manière les valeurs que l'on précisera seront append à la commande sleep
+docker run ubuntu-sleeper 10
+
+Avec ENTRYPOINT les paramètres en ligne de commande seront ajoutés à la suite.
+Avec CMD les paramètres en ligne de commande remplaceront la commande
+
+=> problématique: si je ne mets pas de valeur? la commande sleep n'est pas consistence, il manque un paramètre
+<= solution: combiner les deux ENTRYPOINT avec CMD
+
+FROM ubuntu
+ENTRYPOINT["sleep"]
+CMD['5']
+
+Important: ces deux commandes doivent toujours se suivre, ca semble être du bon sens
+
+=> problématique: si je veux vraiment modifier le poitn d'entrée
+=> solution: utiliser --entrypoint
+docker run --entrypoint sleep2.0 ubuntu-sleeper 10
+
+******************************************************************************************
+Premier fichier de config
+
+Verifier que l'@IP est sur 0.0.0.0
+
+WORKDIR: on se moque un peut des onventions linux . faites juste un WORKDIR /app
+
+N.B la différence entre && et ; est que dans le premier cas les commandes doivent etre executées avec succès pour passer à la suivante
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,809 @@
+******************************
+***** Creation du projet *****
+******************************
+
+Installation .Net 5.0
+
+https://dotnet.microsoft.com/download/dotnet/5.0
+
+SDK 5.0.401
+ASP.NET Core Runtime 5.0.10
+
+Projet Web Asp .NetCore
+
+=> Swagger (try it out)
+
+******************************
+***** API WEB *****
+******************************
+
+https://graphql.org/
+=> permet de récupérer ce que l'on veut du serveur suivant ce que l'on a définit 
+
+https://www.odata.org/
+=> 
+
+******************************
+***** .Net  *****
+******************************
+
+.Net Framework 
+=> dédié à Windows, pas open source
+=> C# VB.Net F#
+4.8 <= c'est le dernier
+
+
+Mono
+=> portage de C# Widows => Open Source
+=> portage donc toujorus en attente des nouveautés .Net Framework
+
+.Net Core 
+=> C# VB.Net F#
+1.1 => 3.1 
+Open source
+Multi plateforme
+
+Comment porter les application .Net Framework => .Net Core ?
+.Net Standard
+=> 2.1
+=> Equivalent au portage de mono
+=> Portage des bibliothèques de classe, pas les vues
+
+Maintenant que tout a été porté => 
+
+.Net 5.0 6.0
+=> C# VB.Net F#
+=> evidemment , il est possible d'utiliser .NetStandard
+=> couche UI toujours specifique Windows => MAUI
+
+
+
+
+******************************
+***** Controller  *****
+******************************
+Dossier pour gérer les controller
+Hérite de controlleur base MVC sans le V
+
+[ApiController]
+Je gère des demandes HTTP
+
+[HttpGet]
+IEnumerable<WeatherForecast> Get()
+
+WeatherForecast = DTO
+
+Constructeur IoC
+Important: A chaque fois que l'on execute une requete => instanciation d'un nouveau controlleur
+Stateless, pas de gestion d'etat, indépendance de contexte.
+
+****** Url ******
+[Route("[controller]")] => [Route("api/v1/[controller]")] (ajouter version API)
+WeatherForecastController => WeatherForecast 
+
+****** Statut ******
+IActionResult 
+
+return this.StatusCode(StatusCodes.Status204NoContent);
+eturn this.Ok(model);
+
+
+******************************
+***** Model   *****
+******************************
+
+****** DDD ******
+=> Domain
+=> Ajout Infrastructure Data/TypeConfigurations
+Micrsoft.EntityFrameworkCore
+Micrsoft.EntityFrameworkCore.Tools
+Micrsoft.EntityFrameworkCore.Relational
+
+****** Paramétrage du context ******
+	IEntityTypeConfiguration
+		Configure(EntityTypeBuilder<T>) 
+			Parametrage 
+			shadow Foreign Key
+			
+	DbContext : Micrsoft.EntityFrameworkCore
+		OnModelCreating
+			ModelBuilder ApplyConfiguration(new IEntityTypeConfiguration)
+			
+****** Paramétrage du context ******
+Startup => Configuration 
+				Preparation de la WebAPI
+				IoC
+				CORS
+				ConfigureServices
+				
+					services.AddDbContext<SelfiesContext>(options =>
+					{
+						MonProvider <= Microsoft.EntityFrameworkCore.SqlServer => connectionstrings.com
+					});
+				 
+*************				
+Program > application console
+				CreateHostBuilder<Startup>
+*************
+ConnectionString > appSettings.json
+https://www.connectionstrings.com/
+
+Server=myServerAddress;Database=myDataBase;Trusted_Connection=True;
+CreateDefaultBuilder > Startup 
+
+ options.UseSqlServer(this.Configuration.GetConnectionString("SelfiesDatabase"), sqlOptions =>
+                {
+
+                });
+
+Binder objet lié à un autre objet:
+
+var model = _context.Selfies.Include(item => item.Wookie).ToList();
+
+Error:
+System.Text.Json.JsonException: A possible object cycle was detected. 
+This can either be due to a cycle or if the object depth is larger than the maximum allowed depth of 32. 
+Consider using ReferenceHandler.Preserve on JsonSerializerOptions to support cycles.
+
+***********************************
+***** Injection de dependance *****
+***********************************	
+
+*************
+Ajout Service	
+
+Ajout service dans StartUp
+services.AddTranscient<ISelfieRepository, DefautSelfieRepository>()
+
+Domain => ISelfieRepository
+Infrastructure => DefaultSelfieRepository
+
+*************
+Ajout DTO
+
+Application: Ajout DTO
+/DTOs SelfieResumeDto
+
+
+*************
+Scope
+
+Décide de la durée de vie d'un objet 
+Transient => Chaque fois qu'il est rencontré dans le constructeur, on fera un new
+Scoped => Tant que la requete existe, que la réponse n'est pas renvoyée, si l'objet est appelé alors il est reutilisé
+Singleton => Instance unique qui dure tout le temps de l'application
+
+=> préférer Scoped pour les services de DB.
+
+*************
+Extension methods
+
+Regroupement services par reponsabilite avec des methodes extension
+Permet de décorer une classe
+
+Creation Dossier Application/ExtensionMethods/
+AddInjection(this IServiceCollection service)
+{
+	services.AddScoped<ISelfieRespository, DefautSelfieRepository>()
+
+}
+
+*************
+IUnit of Work
+=> Decoupler la possibilité d'enregistrer avec le faire que c'est un DBContext issu de EF
+
+=> amelioration de l'architecture
+Separation Controlleur du DbContext
+
+
+Enregistrer des transaction: Aggregation
+Permettre la sauvegarde à un instant T
+
+Creation dll Infrastructure  
+Ajout interface IUnitOfWork => int SaveChanges()
+Ajout interface IRepository => IUnitOfWork
+
+SelfiesContext : IUnitOfWork
+ISelfieRepository : IRepository
+
+=> Depuis le domain on ne fait pas apparaitre de dbContext		
+=> Tout se joue au niveau DbContext
+
+*************
+Filtre et Query
+
+Ajout [FromQuery]
+[FromBody] int  wookieId
+[FromBody] int?  wookieId
+[FromBody] int  wookieId = 0
+
+this.Request.Query["wookieId"]
+
+this.Request => infos diverses sur la requete et son contenu)
+
+this.Response 
+	
+
+******************************
+***** Envoi fichier via API  *****
+******************************
+
+Postman => Ajout image dans Raw (à remplacer par ...)
+	=> Ajout image dans form-data 
+		Body/form-data => Value/Select Files
+
+
+[Route("Photos")]
+[httppost]
+
+
+Task<IActionResult> AddPIcture(IFormFile file)
+{
+//Old fashion
+	using (var stream = new StreamReader(this.Request.Body))
+	{
+	}
+//New Fashion
+	using var stream = new StreamReader(file.OpenReadStream())
+	var content = await stream.ReadToEndAsync();
+
+}
+
+
+IWebHostEnvironment via IoC dans le controller pour recupérer le contexte d'execution de l'application
+
+********************************
+Stockage image en BDD
+
+ValueObject ils sont egaux par leurs valeurs
+
+
+
+
+
+********************************
+Migration de BDD
+
+Faciliter la mise a jour de la BDD a partir du code
+Code First => on part du code pour générer le schema de BDD 
+
+Depuis SQLServer on peut géner le script que l' on pourrait appeler depuis le code.
+
+1. le code initial;
+2. A chaque ajout de colonne , table etc... => on fait une migration qui va gérer le Declaratif
+
+1. Creation d'u nouveau projet   XXXX.Data.Migrations
+N.B penser à le passer en .Net5.0
+1.1 ouvrir le Dossier
+1.2 Cmd dotnet tool list
+github.com/natemcmater/dotnet.tools
+1.3 choisir dotnet-effect depuis nuget.org 
+1.4 dotnet tool install --global dotnet-ef --version 5.0.1
+1.5 dotnet ef migration list
+N.B Microsoft.EntityFrameworkCore.Design est neecessaire.
+
+Le DbContext est manquant alors il faut qu'on puisse faire un lien avec
+
+2.Aller dans le projet Infrastructure
+2.1 ajout classe SelfiesContextFactory : IDesignTimeDbContext<SelfiesContext>
+2.2 Implementer l'interface => CreateDbContext(string[] args)
+
+3. Ajouter un ConfigurationBuilder
+3.1 ajouter une dosier Settings/appSettings.json => mettre dedans la ConnectionString
+
+3.2. Ajouter une reférence vers le nouveaux fichier de settigns Json
+3.3 configurationBuilder.AddJsonFile(Path.Combine("appSettings.json"))
+N.B Nuget: Microsoft.Extension.Configuration.Json
+
+4. Recupérer IConfigurationRoot configurationRoot = configurationBuilder.Build() pour recuperer ce qu'il y a dans le ficheir de cofniguration
+4.1 DbContextOptionsBuilder = new DbContextOptionsBuilder()
+4.2 builder.UserSqlServer(configurationRoot.GetConnectionString("SelfiesDatabase"))
+
+
+5 Passage du DbContextOptionsBuilder au SelfiesContext
+
+6 Ajout du projet de migration
+N.B C'est assez souple d'avoir un projet de migration par contexte
+6.1 donet <path_vers_assembly_a_migrer> ef migration add <nom_de_la_migration> --project=<assembly_de_migration_de_destination>
+    donet <path_vers_assembly_a_migrer> ef migration add InitDataBase --project=<assembly_de_migration_de_destination>
+N.B: On fait en sorte de ne pas mettre de code dans le projet de migration. C'est depuis le parent que l'on travaille
+N.B Ajouter uen reference a l'assembly a migrer dans UseSqlServer(...., b => b.MigrationsAssembly(<nom_de_assembly_de_destination>))
+
+=> Un dossier migraotion est créé dans Data.Migrations
+Une classe avec le script de modification
+Une classe de sn
+N.B Ajouter une reférence a Infrastrcture dans la lib de migration
+N.B Penser a supprimer les tables de la BDD avat d'executer la migration
+
+7. Excecution de la migration (depuis infrastructure)
+dotnet ef database update 
+
+8 Creation d'une colonne 
+8.1  donet <path_vers_assembly_a_migrer> ef migration add AddDescription --project=<assembly_de_migration_de_destination>
+N.B utiliser le <OutputPath> dans les properties  du projet de migration pour pouvoir detecter les MAJ de dll du parent (inrastructure)
+
+
+
+
+********************************
+CORS (cross origin ressources sharing)
+
+CORS = Protection pour éviter les injections
+
+developer.mozilla.org 
+
+1. Dans App Startup => app.UserCors()
+1.1 Aller dans ConfigurationServices pour ajouter des policies
+1.2 creer une classe d'extension pour contenir les différentes policies
+
+class SecurityMethods
+
+1.3 définir une POLICY par défaut
+public const string DEFAULT_STRING = "DEFAULT_POLICY"
+
+public static void AddCustomSecurity(this IServceCollection services)
+	{
+		services.AddCors(options => {
+			options.AddPolicy((DEFAULT_POLICY, builder => {
+				builder.AllowAnyOrigin();
+			}))
+		})
+	}
+
+1.4 Dans App Startup => app.UserCors(SecurityMethods.DEFAULT_POLICY)
+1.5 Ajout des autorisatiosn sur les headers et mehtods
+builder.AllowAnyOrigin();
+				  		.AllowAnyHeder()
+						.AllowAnyMethod()
+
+
+
+1.6 définir une nouvelle POLICY 
+	public const string DEFAULT_STRING = "DEFAULT_POLICY_2"
+
+1.6.1 Ajout des autorisations sur les headers et mehtods
+builder.WithOrigin("IP_A_AUTORISER");
+				  		
+
+
+1.7 définir une policy pour surcharger la politique par defaut directement sur le controlleur
+[EnableCors(SecurityMthodes.DEFAULT_POLICY_2)]
+
+1.8 définir une policy pour surcharger la politique par defaut directement sur une methode Get
+[EnableCors(SecurityMthodes.DEFAULT_POLICY_3)]
+
+1.9 il est possible de desactiver le CORS pour une methhode avec [DisableCors()]
+
+2.0  Mettre les Url CORS ken config
+2.1 Créer une section dans appsettings.json
+"Cors": {
+	"origin" : "mon_url"
+}
+2.2 Ajouter une reference a IConfiguration poru récupérer les settings
+
+ public static void AddCustomSecurity(this IServceCollection services, IConfiguration configuration)
+
+ 	builder.WithOrigin(configuiration["Cors:Origin"]);
+
+
+
+********************************
+.Net 5.0 ==>.Net 6.0
+Startup.cs est fusionné dans Program.cs
+
+
+********************************
+JWT
+
+jwt.io
+3 parties : Header (sha256) / Payload (contient les infos des securité) / Signature
+En Http on met le token dans:  authorization: Bearer
+
+1. demande authentification
+2. recuperation du token
+3. Appel d'une url avec le token
+4. Recuperation de la ressource demandée
+
+1. Ajout de SelfiesContext : IdentityDbContext, IUnitOfWork
+N.B ajout de Microsoft.ApiNetCore.Identity.EntityFrameworkCore
+
+2. Faire une migration pour mettre a jour la BDD avec les tables liées à l'authentification
+3. Declarer l'utilisation du middleware Authentifcation
+
+app.UseAuthentication()  <= JWT
+app.UseAuthorization()
+
+
+3.1 Ajouter methodes extensions pour définir lla strategie de gestion du token
+public static void AddCustomSecutrity(this IServceCollection services, IConfiguration configuration)
+{
+	services.AddCustomCors(configuration)
+	services.AddCustomAuthentication(configuration)
+}
+
+public static void services.AddCustomAuthentication(this IServceCollection services, IConfiguration configuration)
+{
+	services.AddAuthentication(options => {
+		options.DefaultAuthentication => JwtBrearerDefaults.AuthenticationScheme;
+		options.DefaultScheme => JwtBrearerDefaults.AuthenticationScheme;
+		options.DefaultChallengeScheme => JwtBrearerDefaults.AuthenticationScheme;
+	}).AddJwtBrearer(options => {
+
+		string maCle = configuration["jwt:Key"];
+
+		options.SaveToken = true;
+		options.TokenValidaotionParameters = new Micorsoft.IdentityModel.Tokens.TokenValidationParameters()
+		{
+			IssuerSigningKey = new SymetricSecurityKey(Encoding.UTF8.GetBytes(maCle))
+			ValidateAaudience = false,
+			ValidateIssuer = false,
+			ValidateActor = false,
+			ValidateLifetime = true
+		}
+	});
+}
+
+
+N.B ajout de Microsoft.ApiNetCore.Authentication.JwtBearer
+
+3.2 Définition du contexte de login
+=> Déinir le lien entre le contexte utilisateur et le fait que c'est ce contexte qui sert a s'authentifier
+
+N.B ajout de Microsoft.ApiNetCore.Identity.UI
+
+3.3 servives.AddDefaultIdentity<IdentityUser>(options => {
+	options.signing
+}).AddEntityFrameworkStores<SelfiesContext>();
+
+4. Ajout d'un controlleur pour l'authentification
+4.1 Ajout d'une route pour le login
+
+
+[ApiController]
+[Route("api/v1/[controller]")]
+public class AuthenticateController : ControllerBase
+{
+	private UserManager<IdentityUser> _userManager = null;
+
+	public AuthenticateCoontroller(UserManager userManager)
+	{
+		_userManager = userManager;
+	}
+
+	[HttpPost]
+	public IActionResult Login([FromBody] AuthenticateUserDto dtoUser]){
+		IActionResult result = this.BadRequest();
+		var user = await _userManager.findByEmailAsync(dtoUser.Login)
+		if(user != null)
+		{
+			var verif = await _userManager.CheckPasswordAsync(user, dtoUser.Password)
+			if(verif)
+			{
+				result = this.OK(new AuthenticateUserDto(){
+					Login = user.Email,
+					Name = user.UserName
+					Token = GenerateJwToken(user)  <= code à importer
+				})
+			}
+		}
+
+
+		return result;
+	}
+}
+
+
+4.2 Ajout d'une route pour la ceation d'un token
+
+public IActionResult Register([FromBody] AuthenticateUserDto dtoUser]){
+		IActionResult result = this.BadRequest();
+
+		var user = new IdentityModel(dtoUser.Login)
+		user.Email = dtoUSer.Login
+		user.UserName = dtoUSer.Name
+
+		var success = await _userManager.CreateAsync(dtoUser)
+
+		if(success.Succeeded)
+		{
+			dtoUser.Token = this.GenerateJwToken(user)
+			result = OK(dtoUser)
+		}
+
+
+		return result;
+	}
+
+
+
+5. Vérification de l'authorisation sur la route
+
+[ApiController]
+[Route("api/v1/[controller]")]
+[AuthenticationSchemes = JwtBrearerDefaults.AuthenticationScheme)]  <= On ajoute une vérification sur l'autorisation d'exploiter la route
+[EnableCors(SecurityMethods.DEFAULT_POLICY)]
+public class SelfieController : ControllerBase
+{
+
+
+}
+
+
+********************************
+Automatisation avec Postman
+
+http://localhost:3000/api/V1/Selfies
+1. Creation d'une variable pour stocker le Token
+Onglet Authorization Token // {{jwtToken}}
+
+2. Creation d'un nouvel environnement
+Add Mon_Environment
+
+2.1 Ajouter une variable
+jwtToken
+
+3. Recuperation du Token suite à AuthenticateController
+
+Onglet Tests
+var result =  pm.response.json();
+pm.variables.set("jwtToken", result.token);
+console.log(result.token);
+
+
+4. Ajouter enchainement sur Get All Selfies
+pm.SetNextRequest("get All Selfies")
+
+N.B penser à ordonner l'ordre des requetes
+
+
+********************************
+Secrets 
+
+clic droits => gérer les données secretes de l'utilisateur
+
+********************************
+Ammeliorer la configuration
+
+Transformer la magic string en classe
+
+solution 1. Creer une classe pour accueillir les données à binder depuis le fichier de config
+SecurityOption securityOption = new SecurityOption()
+configuration.GetSection("Jwt").Bind(securityOption)
+
+
+solution 2. via IoC
+1. Ajout methodes extension 
+	AddCustomOption(this IServiceCollection services, IConfiguration configuration)
+	{
+		services.Configure<SecurityOption>(configuration.GetSection("Jwt")
+	}
+
+2. Dans ConfigurationServices
+	services.AddCustomOptions(this.Configuration)
+
+3. Recuperation des options dans Authenticate 
+	private SecurityOption _option = null
+
+	AthenticateController(UserManager<IdentityUser> userManager, IConfiguration configuration, IOption<SecurityOption> options)
+	{
+		_options = options.Value
+		_userManager = userManager;
+		_configuration = configuration;
+	}
+
+
+********************************
+Configuration par environnement
+Properties/LaunchSettings.json contient la liste des configurations 
+
+appSettings.json
+	appSettings.Development.json
+
+Utilisation de IWebHostEnvironment 
+env.IsDevelopment()
+
+N.B les secrets et les connectionStrin sont propres à chaue environnement, du coup il faut faire autrement comme avec une variable d'environnement
+la clé Jwt::Key s'écrit Jwt__Key dans launchSettings.json
+
+
+Execution:
+dotnet run -environment STAGING
+
+
+************************************************************************************************
+Mise ne production
+
+Serveurs Web: Apache / Tomcat / IIS / NGinx 
+
+Mode déploiment : 
+Dépendant: attention car les mises a jour du serveur auront un impact
+Autonome: 
+
+************************************************************************************************
+Logger
+
+
+try{
+
+}
+catch()
+{
+	this.Problem("connato log)
+}
+
+Communiquer/documenter via Swagger
+
+[produceResponseType(StatusCode.Status200OK)]
+[produceResponseType(StatusCode.Status400BadRequest)]
+[produceResponseType(StatusCode.Status500InternalError)]
+
+
+Microsoft.Extensions.Factory
+ILoggerFactory : IDisposable
+
+
+Possiblité:
+	 d'affiner les logs par controlleur dans les fichier .<env>.json
+	 de filtrer par rapport au provider
+
+
+
+************************************************************************************************
+Middleware
+
+=> doc Microsoft
+Ajouter un custom middleware
+
+1. dossier Middlewares/
+
+private RequestDelelegate _next => null
+
+
+************************************************************************************************
+CQRS
+
+
+=> Organiser le code 
+
+=> utilisation du pattern Mediatuer pour centraliser les demandes et dispatcher
+=> separer les commandes (ecriture) et les request (lecture) un peu comme Redux
+
+
+services.AddMeiatR(typeof(Startup) )
+
+1. Mise en place
+N.B: MediatR.Extensions.Microsoft.DependanceiesInjection
+
+1.1 Aller chercher toutes les meta donnes des classes / methodes qui sont liées au mediateur
+serivces.AddMediatR(typoeof(Startup))
+
+1.2 Creation dossier Application/Queries /Commands
+
+2. Query
+
+2.1 Nouvelle Classe SelectAllSelfiesQuery : IRequest<List<SelfieResumeDto>>
+2.2 Recuperer le mediateur IMediator depuis le controller
+2.3 Execution de la Request 
+	var model = this._mediator.Send(new SelectAllSelfiesQuery())
+
+2.4 Novuelle classe de handler pour deporter la partie _repository du controller 
+	SelectAllSelfiesHandler : IRequestHandler<SelectAllSelfiesQuery, List<SelfieResumeDto>>
+
+
+3. Command
+Idem que 2. pour les commandes
+
+
+
+raw.githubusercontent.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

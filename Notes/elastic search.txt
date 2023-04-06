@@ -1,0 +1,40 @@
+Node
+A node is a Java process running Elasticsearch. Typically each node will run on its own dedicated machine.
+
+Cluster
+A cluster is one or more nodes with the same cluster name.
+
+Shard
+A shard is a Lucene index. Every index can have one or more shards. Shards can be either the primary shard or a replica.
+
+Index
+An index is the rough equivalent of database in relational database land. The index is the top-most level that can be found at http://yourdomain.com:9200/<your index>
+
+Types
+Types are objects that are contained within indexes. Think of them like tables. Being a child of the index, they can be found at http://yourdomain.com:9200/<your index>/<some type>
+
+Documents
+Documents are found within types. These are basically JSON blobs that can be of any structure. Think of them like rows found in a table.
+
+
+ https://www.elastic.co/downloads/elasticsearch
+Mac Users : tar -xvf elasticsearch-2.4.0.tar.gz  
+
+Windows Users : unzip -l elasticsearch-2.4.0.zip  
+
+
+An Example on XPUT
+33
+
+curl -XPUT 'http://localhost:9200/twitter/tweet/1' -d '{
+    "website" : "tutorialdrive",
+    "post_date" : "2016-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'
+An Example on XPOST
+
+curl -XPOST 'http://localhost:9200/twitter/tweet/' -d '{
+    "website" : "tutorialdrive",
+    "post_date" : "2016-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}'

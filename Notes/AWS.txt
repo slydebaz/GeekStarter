@@ -1,0 +1,118 @@
+IAM: Identity and Access Management
+VPC: Virtual Private Cloud
+	Create IGW Internet Gateway
+	A route table with predefined subnets
+	NACL: Network Access Control List
+	Subnets to provision AWS resources
+
+IGW: Combination of sofwtare and hardware qui permet de communiquer à Internet et aux composants de communiquer entre eux
+RTs: Route Tables. Positionnée derriere la IGW. C'est ce qui route le traffic vers les bons composants
+NACLs: Network Access Control Lists: Couche optionnelles de securite qui agit comme un firewall
+	Les regule sont evaluées de la plus basse a la plus haute a partir de le #
+	la premiere regle trouvee qui permet de router le traffic est appliquée immediatement sans considérer celle qui viennent apres
+	les new NACL créés DENy le traffic par defaut
+	les nouveaux subnets peuvent uniquement etre associés avec une NACL 
+	une NACL accept ou rejet le traffic d'accéder a un subnet
+	une fois dans un subnet, le trafic peut encore etre soumis a d'autre NACLs
+	
+
+Subunets: Private ou Public. Pour declarer un subnet prové, il on peut declarer une TableRoute non liés à une IGW
+
+S3: Simple Storage Service
+	Buckets : Root Folder, can contains files or other folder
+	Objects: files stored on bucket
+		 Durability (chance to not be lost) / Availability (time to be accessible)
+		 Standard
+		 Reduce Redundancy Storage (RRS)
+		 Infrequent Access (S3-IA)
+		 Glacier 
+	LifeCycle
+		Apply in a bucket/folder/object
+		
+	Permissions
+	
+	Versionning
+	
+
+	
+
+EC2: Elastic Compute Cloud: Viatual Computer in the Cloud
+	Amazon Machine Image: (AMI) OS
+	Instance Type: Processeur Power
+	Elastic Block Store (EBS): Locale Storage
+		IOPS: Input/Output Operations per Second
+	IP Adressing: Internet Access
+		Private / Public (optionnal but required to access Internet)
+		
+	Security Groups: Security similar Firewall
+		Seulement pour les ALLOW
+		Un groupe par defaut avec traffic ouvert In/Out
+		Tous les nouveaux groupes ont un traffic out ouvert et entreant fermé
+	RAM
+
+	OnDemand
+	Reserved
+	Spot
+
+
+
+Databases:
+Cost efficient
+Resizable Capacity
+
+Instance classe like ECS for performance
+
+On Demand / Reserverd
+
+Datatransfer in/out 
+
+Database Storage
+
+
+RDS : engines:
+	Amazon Aurora
+	MySQL
+	MariaDB
+	PG
+	Oracle
+	SQLServer
+
+
+
+
+DynamoDB: NoSQL
+Consistent
+SignleDigit ms latency at any scale
+godd for mobile, gaming, iot ...
+
+
+SNS: Simple Notification Service
+
+    Topics: lebel and group endpoint to receive messages
+    Subscriptions : endpoints that will receive messages sent by topics
+    Publishers: human/system to publish the message to be sent
+
+
+CloudWatch: Monitoring
+    Montitor to alarm and send notification even make changes
+
+
+Elastic Load Balancer
+    Balance traffic
+    Detect Unhealthy instances
+    
+Auto Scaling 
+    Pop/Kill EC2
+    1. Launch configuration
+    2. Strategy scale
+
+Route 53
+Configure and mange web domaisn for website / application
+Registration / DNS / Health checking
+
+
+
+
+
+
+

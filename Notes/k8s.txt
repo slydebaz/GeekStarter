@@ -1,0 +1,2143 @@
+container : 2 notions a retenir 
+	namespace => ce qu'un processus voit : grouper et isoler des ressources
+	control groups cgroups => limiter les ressources que le processus peut utiliser
+	
+=> processus qui peut etre execute de manière isolé
+
+***********************************************************************************************************
+Cloud Native Computain Foundattion => cncf.io
+
+
+
+
+
+***********************************************************************************************************
+DevOps 
+Minimise le time to market en rapprochant le dev des ops
+
+Docker est le socle de base des architectures microservices
+Il faut donc une technologie  pour manipuler les conteiner, les changer, les deployer, revenir en arriere, avoir uen IHM poru monitorer tout ca.
+
+
+***********************************************************************************************************
+Kubernetes "Homme de barre"
+
+C'est une jeu d'API qui se présente sous la forme d'un ensemble de containeurs mis au dessus de ceux qui representent le domaine applicatif
+executes sur des containers qui tournent sur des serveurs
+
+Need orchestration ?
+Server x Change Rate = Benefit of orchestration
+
+
+Orchestrateur => 
+*gestion application executées dans des containeurs (deploiement, montée en charge, mise a jour)
+*Reconciliation: redemarrage des services en echec
+*gestion service stateless (pas de persistence de donnée), service stateful 
+*secret et configuration
+*long running process et batch jobs
+*RBAC Role Base Access Control
+
+Autres:
+Amazon ECS, Mesos, Marathon
+
+Vendors products 
+Docker Enterprise, Openshift Redhat, Ubuntu K8S, VMware pks 
+
+https://kubernetes.io/partners/#conformance
+
+
+
+
+
+***********************************************************************************************************
+
+https://kubernetes.io/docs/home/
+Les concepts
+Cluster = ensemble de nodes Linux ou Windows
+Node : 
+* Master : en charge du cluster
+	Garant de l'état du cluster
+	=> Une API existe pour la gestion du cluster
+        Représentent le control plan. Nodes qui exposent l'API de K8s. 
+        On s'adresse a eux pour gérer les node worker et donc les applications.
+
+* Worker : utilisé pour executer des app clientes
+
+Si un node faile alors vous avez toujours les autres
+Le Master va surveiller les workers et gérer le dispatch de la charge vers les noeud OK
+
+kubectl cluster-info
+kubectl get nodes
+
+
+POD: 
+*Plus petite unité applicative dans K8s
+*Groupe de containers qui partage du reseau et du stockage
+
+Pour mettre à l'echelle une application, en général on met un container par POD mais il est possible d'avoir d'autres containers dans le pod (side car pattern).
+C'est le cas de cotnainer qui viennent assister l'application.
+En fasiant partie du meme pod, ils peuvent également partager le meme network 
+Les containers d'un pod partagent le meme cycle de vie.
+Pour voir l'utilité des pods, il faut imaginer avoir à gérer les relation et cycles de vie de plusieurs containers si on devait faire uen mise à l'echelle "manuelle" sans rien pour orchestrer
+
+Deployment:
+Gerer ensemble de POD identiques : replicas
+Utilisé pour mettre à jour les POD
+
+Service: Regroupement de POD similaires
+Definition de regles reseau pour accéder à ses POD et faire de la repartition de charge
+Exposer des PODs pour les rendre accessible à l'intérieur ou à l'exterieur du cluster
+Note: Il ne suffit pas de declarer l'applcation qui s'executera dans les containers de ce POD. Elle ne sera accessible qu'une fois qu'on aura definit un service pour la référencer
+
+Resources:
+Workload => permet le déploiement des pods de maniere abstraite
+Network
+Configuration
+Stockage
+RBAC
+Etendre le cluster
+
+
+***********************************************************************************************************
+YAML
+
+APIVersion: précise le groupe utilise dans l'API pour gérér la ressource
+Kind: type de ressource (POD / Service / Deployment)
+metadata
+Label & Annotation (clé /valeur)
+Label: Selection d'objet / Contrainte de déploiement / Lister les ressources d'une applciation
+Annotation : Utilisé par les applciation externe pour ajouter ou configuré des applications
+
+***********************************************************************************************************
+Gestion du cluster
+
+kubectl : envoie de requete à l'API server pour gérer le cluster (création ressource, deployment ....)
+Chaque requete envoyée par kubectl passe par des etapes d'authentification, autorisation
+
+Config KubCtl:
+${HOME}/.kube/config
+$KUBECONFIG
+~kubeconfig
+
+NB: on peut avoir les configs de plusieurs cluster dans un seul fichier de config kubectl
+ 
+
+1 contexte est définit par deux choses:
+* 1 nom de cluster
+* 1 nom d'utilisateur
+
+kubectl config view
+
+context:
+    cluster: minikube
+    extensions:
+    - extension:
+        last-update: Mon, 28 Mar 2022 10:49:45 CEST
+        provider: minikube.sigs.k8s.io
+        version: v1.25.2
+      name: context_info
+    namespace: default
+    user: minikube
+  name: minikube
+  
+  => ici le namespace par defaut est utilisé
+
+
+
+
+***********************************************************************************************************
+Pour apprendre: https://katacoda.com/
+play-with-k8s.com
+play-with-docker.com
+
+kubectl version => client Kubctl et le cluster
+kubectl get nodes
+kubectl get pods
+kubectl get pods -n kube-system
+
+https://gitlab.com/lucj/k8s-exercices/-/blob/master/Installation/kubectl.md
+
+***********************************************************************************************************
+Installation
+
+VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$VERSION/bin/windows/amd64/kubectl.exe
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$VERSION/bin/windows/386/kubectl.exe
+
+kubectl exec -ti pod-default -- sh
+
+
+
+***********************************************************************************************************
+Architecture / Vue d'ensemble
+K8s est un cluster
+
+
+
+Node Master
+
+Kube-apiserver : expose l'api du cluster; point d'entrée des requetes 
+kube-scheduler: intervient pour créer un pod et selectionner le node sur lequel il devra etre déployé
+kube-controller-manager: processus qui englobe plusieurs controller qui sont en charge de surveiler l'etat des ressources et d'engager des actions correctives si une appl ne tourne pas correctement
+etcd : distributed key/value store qui stocke l'etat du cluster et son historique => peut etre installé sur le master ET ASUSSI sur un container externe
+        Responsible for implementing logs within the clusterti insure there isn o conflicts within the master
+
+
+Node Worker
+
+Kube-proxy: gère le réseau pour l'exposition des services du node vers l'exterieur
+Kubelet: Agent qui s'execute sur chaque noeud du cluster 
+        Communique avec le node master
+        Assure que les containers d'un pod tournent conformement à la specification/ Reboot en cas de crash. 
+        Communique avec l'API server du manager
+container-runtime: environnement d'execution des container: docker, rkt, cri-o ..
+
+
+
+***********************************************************************************************************
+Installation.
+
+* MiniKube https://github.com/kubernetes/minikube
+https://minikube.sigs.k8s.io/docs/start/
+=> besoin d'un hyperviseur
+=>        binaire minikube
+=> 	 	  binaire kubectl
+=> execute une VM sur lequel s'execute l'ensemble des processus de K8s
+=> ca donne un cluster K8s avec un seul node  . PAs un environnement de production
+
+curl -Lo minikube https://storage.googleapis.com/minikube/latest/12740/minikube-linux-386
+
+N.B: Par defaut le driver c'est Hyper-V, il es t possible de le changer par Virtualbox.
+si ca merde toujorsu apres une minkube start alors faire un ::
+minikube delete 
+minikube start --no-vtx-check 
+minikube start --no-vtx-check --cpus 4 --memory 8192
+./VBoxManage.exe modifyvm "minikube" --cpus 2 --memory 8192
+
+
+
+* Docker Desktop (Mac/Windows) https://hub.docker.com/editions/community/docker-ce-desktop-windows / https://hub.docker.com/editions/community/docker-ce-desktop-mac
+=> anciennement Docker For Mac / Windows (fin 2018)
+=> choix de l'orchestrateur Swarm / Kubernetes
+
+Activation wsl(WSL, Windows System for Linux) 
+https://docs.microsoft.com/fr-fr/windows/wsl/
+https://docs.microsoft.com/fr-fr/windows/wsl/install-manual#step-4---download-the-linux-kernel-update-package
+wsl -l -v
+
+*Kind Kubernetes in Docker  https://github.com/kubernetes-sigs/kind
+=> besoin de l'Api docker
+=> Autre solution qui permet de lancer un ccuster en local
+=> permet de créer une cluster avec un ou plusieurs nodes (avec fichier de configuration). Chaque Node s'execute dans un container
+
+*MicroK8s https://microk8s.io/docs/getting-started
+https://microk8s.io/docs/install-alternatives
+=> Execute un cluster composé d'un seul ou plusieurs nodes
+=> très lights, fonctionne avec addon
+=> pas mal pour les developpeurs, intragration continue, IoT
+=> utilisation avec Multipass
+
+*K3s  https://k3s.io/
+=> convient très bien pour IoT et edgecomputing
+=> issue de Rancher
+
+*Mutlipass
+=> permet de créer de VM unbuntu facilement
+=> Compatible avec plusieurs hyperviseurs
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+KubeCtl
+
+2 approcahes : spec et impérative
+
+Dev: Impérative
+Prod: Declaratif
+
+AutoCompletion
+sudo apt-get install bash-autocompletion
+source <(kubectl completion bash)
+
+=> documentation
+kubectl api-resources => voir tout ce qu'il y a dans le cluster dans un namespace ou global
+kubectl explain => obtenir la description de ce qu'il doit etre contenu dans la commande
+
+kubectl explain services --recursive
+
+kubectl explain service.spec
+kubectl explain service.spec.type
+
+kubectl explain  deployment.spec.template.spec.volumes.nfs.server
+
+
+Tips: utilisation de '---' pour separer les objets dans un fichier yaml
+
+metadata: only name is required
+
+
+=> recupere la liste des objets
+kubectl get all
+
+
+=> apply
+create/update resources in a file
+kubectl apply -f <yaml_file>
+
+create/update a chwole directory of yaml
+kubectl apply -f <yaml_folder>/
+
+create/update from a url
+kubectl apply -f <yaml_url>
+
+
+=> ouverture shell interacatif dans un pod
+
+kubectl exec -ti <pod_name> --container <container_name> --bash
+kubectl exec -ti <pod_name> --container <container_name> --sh
+
+=> read:
+kubectl get pods 
+kubectl get po/www -o yaml
+kubectl describe po/www
+
+kubectl get deploy/www -o jsonpath='{.spec.template.spec.containers[0].image}' => verfier le fichier json de l'image
+
+https://kubernetes.io/fr/docs/reference/kubectl/jsonpath
+kubectl get pods -o custom-colums='NAME:metada.name, IMAGES:spec.containers[*].image' => affichage custom
+
+=> delete
+kubectl delete --all pods --namespace=foo
+kubectl delete --all pods --namespace=default
+kubectl delete --all deployments --namespace=default
+kubectl delete --all services --namespace=default
+
+
+kubectl proxy => permet d'ouvrir une connexion entre la machine locale et l'api server. afin d'accéder à des workloads qui sont déployes sur le cluster mais par forcement exposés à l'exterieur
+
+
+=> kubectl aliases
+https://github.com/ahmetb/kubectl-aliases
+
+
+plugins => etendre les focntionnalites de kubectlfichier executable dans le PATH qui commence par kubectl
+
+
+Investigations:
+kubectl get componentstatus
+kubectl get po --namespace=kube-system
+kubectl get po --namespace=default
+
+=> output format
+kubectl create namespace test-123 --dry-run -o json
+kubectl create namespace test-123 --dry-run -o yaml
+ kubectl get pods -o wide
+
+***********************************************************************************************************
+* Cluster de production
+Cluster Manage => gestion par un tiers
+
+Google: GKS (K8s) / AKS (docker)
+DigitalOcean: 
+
+
+* Cluster de production en local
+kudeadm  https://kubernetes.io/docs/reference/setup-tools/kubeadm/ General Abilitity fin 2018
+	=> Il faut au prealable que les nodes soient provisionnés
+	=> Le node pourra etre initilisé sur ce cluster
+		=> 	installation sur chaque machine que l'on souhaite provisionner
+		=> 	depsuis le node master on lance le kube init
+		=>  mise en place du reseau kubectl apply
+			=> revient a deployer des agent sur chaque machine
+		=> Kubeadm join pour rejoindre le reseau
+		
+		=> procedure apres provisionnement des ressources	
+			- Installation de Docker
+			sudo apt-get update
+			curl -sSL https://get.docker.com | sh
+			- Ajout de la clé pour l'authentification des packages provenant de google
+			curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+			-Ajout des sources pour la récup de packages
+			sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+			/etc/apt/sources.list.d/kubernetes.list
+			-Installation de kubelet et kubeadm
+			sudo apt-get install kubeadm kubelet kubectl -y
+			-Sur la machine local Récupérer un fichier de config d'un des nodes pour configurer le contexte de kubectl 
+			scp master@IP-Master:/etc/Kubernetes/admin.conf admin-k8s.conf
+			export KUBECONFIG=$PWD/admin-k8s.conf
+			kubectl get nodes <= les ondes devraient être en Status  = NOTREADY car manque AddOn pour la gestion du reseau
+			-Weave.works kube-add-on
+			kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+			
+			
+			
+	
+	
+
+
+
+kops => permet la gestion complete du cycle de vie d'un cluster
+kubespray => utilise ansible pour la mise en place de K8s avec un inventory
+rancher => pas mal car IHM Web pour la supervision, deploiement de plusieurs cluster et des application viaz un catalogue
+pharos => mise en place cluster sur infra existente
+doccker EE 
+Terraform + Ansible
+
+
+
+
+***********************************************************************************************************
+* POD
+Plus petite unité applicative dans kubernetes
+groupe de containers qui partage la meme stack reseau (via localhost) / staockage (via volumes)
+chaque pod a une @IP dedies
+           se base sur uen specification (Yaml) qui définit les containeers qui tourneront dans le pod
+on peut voir un pod comme un applicatif métier d'uen application
+
+Cycle de vie 
+-lancement 
+kubectl create -f POD_SPECIFICATION.yaml
+kubectl apply -f wordpress_pod.yml
+
+
+-suppression 
+kubectl delete pod wp
+
+-liste des pods (par defautl seulement les namespace default)
+kubectl get pod
+
+-Description d'un pod
+kubctl describe pod POD_NAME
+kubctl describe po/POD_NAME
+
+-logs
+
+kubectl logs POD_NAME [-c container name]
+
+Si il y a plusieurs replicas, la commande logs choisira arbitrairement un pod
+kubectl logs POD_NAME [-c container name] --follow --tail 1
+
+N.B la commande , combinée aux labels permet d'afficher les logs de plusieurs pods.
+-shell interactive
+
+kubectl exec POD_NAME -t -i [-c container name] -- command
+ex: kubectl exec -ti www-594bc6dfc7-k48kh -- sh
+
+-suppression pod
+kubectl delete POD_NAME
+
+-forward de port (publier un port sur la machine hote)
+kubectl port-forward POD_NAME HOST_PORT:CONTAINER_PORT
+
+-Container pause => garant des namespace
+
+N.B chaque pod communique via son @IP
+
+
+1 Volume est lié au cycle de vie du POD et non du container => Si le Container tombe , il n'entrain pas avec lui le volume
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+* Volume
+
+La persistence des données amène toujours son lot de problème et l'usage des containers ne rend pas la chose facile
+StatefulSets: permet de rendre les pods plus persistents
+
+2 Types de volumes:
+
+*Volumes
+	liés au cycle de vie d'un pod
+	tous les containers dans un pod peuven,t les partager
+
+
+apiVersion: v1
+kind: pod
+metadata:
+    name: random-number-generator
+spec:
+    containers:
+    -image: apline
+     name: apline
+     command:
+     arg:
+     volumeMounts:
+     - mountPath: /opt 
+       name: data-volume
+
+    volumes:
+    -names: data-volumes
+     hostPath:
+        path: /data
+        type: Directory
+
+Exemple: Pour AWs on va remplacer hostPath par:
+awsElacsticBlockStore:
+    volumeID: <id>
+    fsType: ext4
+
+
+Les differentes solution de stockage: NFS, GlusterFS, Flocker, ScaleIO, AWS, GCP, Azure, CEPH
+
+*PersistentVolumes
+	Crée au niveau du cluster à et sont découplés du cycle de vie des pods
+	Sépare la configuration de stoackage du pod
+	Peut etre partgé entre les pods
+
+    Cela evite d'avoir a mettre la configuration du volume dans la spec du pod
+
+
+apiVersion: v1
+kind: PersistentVolume 
+metadata:
+    name: pv-volume 
+spec:
+    accessModes:
+        -ReadWriteOnce / ReadOnlyMany / ReadWriteMany
+
+
+kubectl create -f pv-definition.yaml
+
+kubectl get PersistentVolume
+
+*PersistentVolumesClaim
+
+Cet objet cré des requete qui permettent de se bindier automatiquement sur des volumes
+Dès qu'un volume a une spec qui match avec la claim alors on bind les deux.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: myclaim
+spec:
+    accessModes:
+     -ReadWriteOnce
+
+    resources:
+     requests:
+        storage: 500Mi
+
+
+apiVersion: v1
+kind: pod
+metadata:
+    name: random-number-generator
+spec:
+    containers:
+    -image: apline
+     name: apline
+     command:
+     arg:
+     volumeMounts:
+     - mountPath: /opt 
+       name: data-volume
+
+    volumes:
+    -names: data-volumes
+     persistentVolumeClaim:
+        claimName: myclaim
+
+
+
+Lors de la suppression d'une claim, on peut choisir la politique appliquée pour la conservation du Volume
+
+persistentVolumeReclaimPolicy: Retain / Delete / Recycle
+
+
+
+
+
+
+Tips: dans la mesure du possible il est préféreable de limiter l'usage des StatefulSets
+Si il y a besoin de gérer une BDD alors on préférera utiliser une BDD cloud : Db as as service
+
+Le principe de K8s est de définir des ressources qui sont amenées à changer assez souvent, ce qui n'est pas le cas des BDD
+
+
+Dans la réalité, votre stockage sera administré par un provider.
+Le standard CSI permet aux providers de fournir de plugin qui vous permet de lier votre cluster a votre volume
+
+Static Provisonning: Le disque est créé manuellement avant le PersistentVolume
+
+gcloud beta compute disks create --size 1GB --region us-east1 pd-disk
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: pv-vol1
+spec:
+    accessModes:
+        - ReadWriteOnce
+    capacity:
+        storage: 500Mi
+    gcePersistentDisk:
+        pdName: pd-disk
+        fsType: ext4
+
+
+Dynamic Provisonning: 
+Automatically provisionne stockaage sur le provider et l'attacher au Pod quand le claim est fait
+
+Le but est de passer par un objet StorageClass pour créer automatiquement un PV.
+Dans le storage on va dire quel provider cibler
+
+On peut alors définir plusieurs standard de stockage (silver/gold/platinium)
+
+
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+    name: google-storage
+provisionner: kubernetes.io/gce-pd
+parameters:
+    type: pd-standard               =>ces paramètres sont propres au provider
+    replication-type: none
+
+apiVersion:v1
+kind: PersistentVolumeClaim
+metadata:
+    name: myclaim
+spec:
+    accessModes:
+        - ReadWriteOnce
+    storageClassName: google-storage
+    resources:
+        requests:
+            storage: 500Mi
+
+apiVersion:
+kind: Pod:
+metadata:
+    name: random-number-generator
+spec:
+    containers:
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+* StatefulSets
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+* Docker Approbation
+permet de package ce qu'on fait en ligne de commande dans un fichier.
+Ca ressemble a un docker-component
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+* CRDS and Operators
+
+Ajouter de resources et des controlleurs venus de 3rd parties
+Permet d'aller beaucoup plus loin que la gestion des ressources: monitoring tools, backups, custom ingresses
+L'api et la ligne de commande offre une bonne intégration
+
+
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+* Ingress
+
+definition: traffic entrant. Egress = traffic sortant
+
+Contexte:
+On peut imaginer qu'un nouveau service, donc une nouvelle route concu complement différement des précedentes soir deployée.
+
+Service 1 => port 38080 => load balancer 1  | 
+                                            | => Load balancer baseUrl/s1/baseUrl/s2
+Service 2 => port 38082 => load balancer 2  | 
+
+=> besoin de reconfigurer le load balncer en front a chaque ajout d'un novueau service
+
+
+
+Plus vous exploitez de load balancer via votre provider, plsu vous allez payer cher 
+
+Exploiter un Ingress permet d'embarquer la complexite de gestion de différents services au sein du cluster.
+
+traiter la couche OSI 7 (HTTP).
+Permet de gérer: loadbalancing, ssl, authentication, routing
+ 
+permet de router les connections vers les bons pods
+Fournit un mecanisme natif de routing qui permet de remplacer ce que ferait un  proxy + configuration
+    - un  proxy                                                             => Ingress controller (pas déployé par défaut)
+        : NGinx, Traefik, HAproxy, F5, Envoy, istio
+
+    - configuration                                                         => Ingress resources
+
+Important: Si on se contente de faire la partie resource alors ca ne focntionnera pas.
+Il faut déployer un ingress. Nativement GCP et Nginx sont supportés.
+
+Il est toujours necessiare d'exposer l'ingress via un nodePort/loadBalancer
+
+Déployer un Ingress consite à :
+    - 1 Deployment pour l'app (nginx)
+    - 1 Service pour exposer l'ingress
+    - 1 ConfigMAp pour exploiter la configuration du proxy
+    - 1 ServiceAccount pour définir les roles, ClusterRole, Rolebindings pour monitorer les ressource du proxy
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+* NetworkPolicies
+
+definition: traffic entrant. Egress = traffic sortant
+
+Par defaut tous les objets K8s peuvent communiquer entre eux : All Allow
+Il est alors possible de definir des NetworkPolicy autour d'un pod pour que celui ci autorise ou refuse le traffic 
+
+Pour cela on utilise les: labels et podSelector
+
+La régle suivante se traduit comme ceci:
+
+Allow Ingress Traffic From API Pod on Port 3306
+
+
+apiVersion: networking.k8S.io/v1
+kind: NetwrokPolicy
+metadata:
+    name: db-policy
+    namespace: prod     <= (facultatif) permet de cibler un ns en particulier
+spec:
+    podSelector:
+        matchLabels:
+            role: db
+    policyTypes:
+        - Ingress
+        ingress:
+        -from: 
+            -podSelector:
+                matchLabels:
+                    name: api-pod
+             namespaceSelector: 
+                matchLabels:
+                    name: prod
+        ports:
+        - protocol: TCP 
+        port: 3306
+
+
+*******************************
+Applicabilite de la networkPolicy
+
+Toutes les solutions reseaux ne supportent pas les NetworkPolicy.
+Dans la spec , c'est l'usage de policyTypes (ingress/egress) qui permet d'appliquer la networkPolicy
+
+supportent: kube-router / calico / romana / weave-net
+ne supportent pas: flannel
+
+
+N.B: si votre solution reseau ne supporte pas les networkPolicy, vous pouvez tout de meme les créer mais vous n'aurez pas de message d'erreur.
+
+Important: Il n'y a pas besoin de définir une règle particulière pour la gestion des réponse. 
+            Si le traffic entrant est autorisé, la réponse le sera aussi
+
+*******************************
+Permeabilité du traffic
+
+On peut permettre a un pod d'un namespace A de cibler un pod d'un namespace B. 
+=> propriété 
+    namepsaceSelector:
+        matchLabels:
+            name: staging
+
+Si vous oubliez de présicer podSelector: alors tous les pod de votre namespace pour acceder à la ressource ciblée
+
+*******************************
+Reférencer une ressource externe au cluster => ipBlock
+
+
+apiVersion: networking.k8S.io/v1
+kind: NetwrokPolicy
+metadata:
+    name: db-policy
+spec:
+    podSelector:
+        matchLabels:
+            role: db
+    policyTypes:
+        - Ingress
+        ingress:
+        -from: 
+            - podSelector:
+                matchLabels:
+                    name: api-pod
+         ports:
+         - protocol: TCP 
+           port: 3306
+        egress:
+        -to: 
+            - ipBlock:
+                cidr: 192.168.5.10/32
+         ports:
+         - protocol: TCP 
+           port: 80
+
+***********************************************************************************************************
+***********************************************************************************************************
+* Node Scheduling
+
+
+
+***********************************************************************************************************
+nodeSelector: 
+Permet de scheduler un Pod sur un node avec un label specifique
+
+
+
+1. Définir un node avec un labels
+
+kubectl label nodes <node-name> <label-key>=<label-value>
+kubectl label nodes node1 disktype=ssd
+kubectl get node/node1 -o yaml
+
+	labels:
+		disktype: ssd
+		
+2. dans la spec du Pod on ajoute la clé 
+	nodeSelector:
+		disktype: ssd
+
+Important : si pas de node avec le label alors le pod ne pourra pas etre schedulé
+
+kubectl get pods -l app=<my_pod>
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name:  myapp
+spec:
+    containers:
+    - name: data-processor
+      image: data-processor
+    nodeSelector:
+        size: large
+
+***********************************************************************************************************
+nodeAffinity:
+ 
+s'assurer que les pod sont bien sur des noeuds particuliers
+
+L'affinité est vérifié a deux moment: scheduling et execution
+
+Permet d'appliquer des règles sur le scheduling: 
+
+Available:
+	contrainte Hard: requiredDuringSchedulinIgnoredDuringExecution
+	contrainte Soft: preferredDuringSchedulingIgnoredDuringExecution
+
+Planned:
+    requiredDuringSchedulinRequiredDuringExecution
+
+      duringScheduling      duringExecution
+type1 required              ignored 
+type2 preferred             ignored 
+type3 required              required 
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name:  myapp
+spec:
+    containers:
+    - name: data-processor
+      image: data-processor
+    affinity:
+        nodeAffinity:
+            requiredDuringShcedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                    -key: size
+                    operator: NotIn
+                    values:
+                    - Small
+
+        size: large
+
+***********************************************************************************************************
+podAffinity: 
+
+Permet de scheduler des Pods en fonction de labels présents sur d'autres pods. 
+
+Cas d'usage: Pratique pour associer des pods par regio ou par niveau de securité
+
+	contrainte Hard: requiredDuringSchedullinIgnoredDuringExecution
+	contrainte Soft: preferredDuringSchedullingIgnoredDuringExecution
+	
+	utilisation de topologyKey
+	
+***********************************************************************************************************
+taints:
+
+On definit une taint au niveau du node
+On définit une toleration au niveau du pod
+
+Un taint ne dit pas qu'un pod doit aller sur tel ou ou tel node mais il dit au node de n'accepter que les pod qui ont telle ou telle tolerance.
+
+Cas d'usage: ne pas déployer de pod sur le node master
+
+		effect: NoSchedule
+		key: <node_name>
+
+Tips: il faut eviter d'utiliser ce mecanisme a moins d'ne avoir besoin
+
+kubectl taint nodes <node-name> key=value:taint-effect
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+ 
+spec:
+  containers:
+  - name: myapp
+    image: my
+    tolerations:
+    - key: "app"
+      operator: "equal"
+      value: "blue"
+      effect: "NoSchedule"
+
+Si un pod ne tolere pas la teinte =>  NoSchedule , PrefereNoSchedule, NoExecute (pour les pods deja sur le noeud mais qui n'ont pas la tolerence)
+
+
+
+
+***********************************************************************************************************
+taint & toleration VS Node Affinity:
+
+
+taint & toleration ne garantissent pas que les pod vont preférrer les noed avec un toleration. 
+Ils peuvent aller aileurs sur un noeud qui n'en a pas.
+
+node selector vont permettre l'association des pod a certains moeuds mais ne va pas empecher d'autres pods de venir sur le node
+
+=> il faut donc faire un mix des deux solutions techniques
+Utiliser taint & toleration pour empecher les nodes d'accepter des pods non tolerés
+Utiliser nodeAffinity pour empecher les pods d'etre placés sur les nodes 
+
+
+***********************************************************************************************************
+resources:
+
+request:	
+	memory:
+	cpu:
+limits:
+	memory:
+	cpu:
+
+***********************************************************************************************************
+***********************************************************************************************************
+Commandes impératives:
+
+Nouvelles vesions des commandes plus simple un peu comme les comandes docker
+
+
+
+
+N.B kubectl run: execute un deployment avec un replicas set = 1
+
+kubectl run db --image mongo:4.0 --dry-run=client -o yaml
+	
+--dry-run simule la création d'une ressource
+<= 1.18 pas de valeur
+>=1.18 2 valeurs
+	*client: la resource n'est pas envoyée à l'api server
+	*server: traité par l'api server par non persistée
+
+actif par defaut depuis 1.13
+kubectl run db --image mongo:4.0 --server-dry-run=client -o yaml
+	
+kubectl expose pod <image_name> \ 
+
+--type=NodePort \
+--port=8080 \
+--target-port=80 \
+--dry-run=client \
+-o yaml             
+
+kubectl create service \
+nodeport \
+--tcp <exposed_port>:<redirection_port> 8080:80 \
+--dry-run=client \
+-o yaml  
+
+
+kubectl run db \
+--image=mongo:4.2 \
+--port=27017 \
+--expose \
+--dry-run=client \
+-o yaml
+
+=> comparer la spec sur le server de celle en locale 
+kubectl diff -t
+
+***********************************************************************************************************
+***********************************************************************************************************
+Label & selector
+
+Permet de regrouper des ressources entre elles
+
+kubectl get pods --selector <key>=<value>
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+    name: simple-webapp
+    labels:
+        app: App1
+        function: Front-End 
+spec:
+    replicas: 3
+    selector:
+        matchLabels:
+            app: App1
+    template:
+        metadata:
+            labels:
+                app: App1
+                function: Front-End
+        spec:
+            container:
+            - name: simple-webapp
+
+Les labels du pod doivent (template/metadata/label) matcher le label du replicaset (slector/matchLabels)
+
+***********************************************************************************************************
+***********************************************************************************************************
+Annotations
+
+Utilisées pour info metrie 
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+    name: simple-webapp
+    labels:
+        app: App1
+        function: Front-End 
+    annotations:
+        buildVersion: v1.0
+
+
+
+
+
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Services
+
+Endpoint reseau pour conecter un pod
+Permet de regrouper des pods qui ont la meme specification
+chaque service a sa propre @IP interne au cluster qui est resolu au niveau DNS à partir du nom du service
+Lorsqu'une requete arrive sur l'@IP virutelle associée au service, elle sera redirrigée sur l'un des pods gérés par ce service => Load balancing
+Kube-Proxy met en place les règles de repartition de charge
+Quand un service, des règles sont mises en place sur chaque machine du cluster
+
+CoreDNS va permettre de resoudre les services par nom
+
+Différents types de services:
+	*ClusterIP: exposer un ensemble de pod simplement l'intérieur du cluster
+		L'application qui tourne dans les pods pourra etre consommée par d'autres pods du cluster
+		On ne peut donc pas acceder à un pod depuis l'exterieur mais on a tout a fait le droit de le faire depusi un autre pod
+		Pour acceder a un service du cluster on peut passer par :
+			* port forward
+			* proxy K8s
+			
+		N.B forward et proxy n'ont pas vocation a persister
+		
+		selector:
+			app: vote 			=> indique les Pods que le service va exposer (ceux avec le label: vote)
+		type: ClusterIP
+		ports:
+		-	port:80 			=> port exposé par le service
+			targetPort: 80		=> port sur lequel seront forwardées les requetes sur les pods qu'il regroupe. Si pas mentionné, ce sera le meme que Port
+
+            nodePort: 300000 -> 32767 => port exposé publiquement pour les services de type nodePort. si pas mentionné alors un port au hasard est choisi
+		
+		
+		le label dans la balise selector du service iront matcher avec les pods qui ont le label identiques
+	
+	
+	
+	
+	*NodePort: exposer les Pods a l'exterieur du cluster mais aussi à l'intérieur car c'est aussi un ClusterIP
+		On définit un port sur chacune des machines du cluster pour avoir accès à ce service depuis l'exterieur
+		30 000 <> 32 767 modifiable dans la config de l'API serveur
+		Important: c'est le meme port sur chaque node du cluster
+		
+		type: ClusterIP
+		ports:
+		-	port:80 			
+			targetPort: 80		
+			nodePort: 31000 => port du du service expose par chaque node
+	
+	
+	
+	*LoadBalancer: uniquement si le cluster est utilisé chez un Cloud Provider 
+        Un service nodePort en front de l'infra erxpose une port définit entre  30 000 <> 32 767.
+        Pour éviter à l'utilisateur d'avoir a se souvenir du port associer il faudrait déployer un proxy pour mapper le port 80 au port du service.
+        
+        Utiliser un service de type loadbanlancer évite d'avoir a faire cela et dit au provider de le faire pour nous
+
+		Identique a un nodePort mais ajoute en plus un loadbalancer avec son @IP en front du service comme element d'infrastructure
+		On s'en sert en général quand on a deployé chez un cloud provider
+
+		Il cré un NodePort+ClusterIP and parle dit au LoadBalancer de votre infra de parler au NodePort
+		
+		type: LoadBalancer
+		ports:
+		-	port:80 			
+			targetPort: 80
+	
+	
+	*ExternalName: permet d'établir un mapping avec un nom DNS
+
+N.B: 
+La creation d'un NodePort entraine la creation d'un ClusterIP
+LA creation d'un LB entraine la creation d'un ClusterIP + NodePort
+
+Pour lier un srvice a un pod , le port ne suffit pas car plusieurs de vos application peuvent avoir le meme port exposé.
+Il faut donc utiliser les labels et ajouter une section selector dans la spec du service qui va reprendre les labels du pod
+
+
+selector:
+			app: vote 			=> indique les Pods que le service va exposer (ceux avec le label: vote)
+
+
+
+Important: la creation d'un service est transverse aux noeuds du cluster.
+Aisni on peut acceder à l'application derriere le service depuis les différents noeud et le port du service: <node_ip><service_port>
+
+Single pod sur un single noeud
+Multiple pods sur un seul noeud
+Multiple pods sur plusieurs noeuds 
+
+***********************************************************************************************************
+***********************************************************************************************************
+Deploiements
+
+***********************************************************************************************************
+
+
+Creation d'un deploiement (type controller, replicacontroller est l'ancienne facon)
+
+Permet de créer les pods à partir de ressources de plus haut niveau.
+chacune de ces ressources à son propre contexte d'application.
+
+Permet de monitorer des pods labellises. Si un des pods fails alors le replicaset ira le recreer
+
+Replicaset utilisera sont selector pour cibler les pods à surveiller
+selector:
+    matchLabels:
+        key: value
+
+Spec en 3 parties :
+1. Details du deploiement
+2. Replicaset : nb de replicas, nb de selector poru savoir quels pods le replicas set va regrouper
+3. Pod: definition de la specification des pods qui seront lancés par le deploiement
+
+LA spec d'un deploiement contient la spec des pods qui seront gérés par ce deploiement
+
+
+*Deployment: Permet de gérer le cycle de vie des pods 
+				Creation/Suppression
+				Scaling
+				Rollout (mise a jour) /Rollback 
+				définir le nombre de pod dans le cluster et de vérifier que ce nombre est toujours OK => utile en cas de mise a jour d'un microservice car si un pod crash alors on en redemarre un
+				
+				ReplicaSet: c'est lui qui lance les actions
+				
+
+kubectl apply -f deploy.xaml
+kubectl create deploy vote --image instavote/vote
+
+N.B: une commande impérative c'est pratique mais ca ne rempalcera jamais une spec
+N.B Note: vous pouvez récupérer les IPs des machines de votre cluster avec la commande $ kubectl get nodes -o wide
+
+=> create
+kubectl create -f <deploy_name>
+
+=> get
+kubectl get deployments
+
+
+
+
+
+***********************************************************************************************************
+Mise a jour d'un deploiement
+
+La creation d'un deploiment entraine l'enregistrement d'un rollout pour pouvoir revenir en arriere facilement.
+
+https://blog.container-solution.com
+
+Canary: la majorité des requetes est traitée par V1 => l'utilisateur est le testeur. Si OK on continue sinon on fallback
+Recreate: v1 => v2 passe par l'arret de v1 => interruption de service
+Rolling update: mise a jour graduelle => on teste => on met a jour le replicas suivant
+Blue-Green: on doit avoir 2 version de l'"application. On bascule tout le flux d'un coup
+
+En K8s on utilise RollingUpdate
+Spec:
+	type: RollingUpdate
+		rollingUpdate:
+			maxSurge: 	nombre de replicas en plus par rapport au courant		
+			maxUnavailable: nombre de replicas qu'il peut y avoir en moins
+
+=>update
+kubectl apply -f <deploy_name>
+
+kubectl set => permet de mettre a jour certaines ressources
+kubectl set image => permet de specifier l'image  qui doit etre mise a jour dans un deployment
+
+kubectl set image <deploy_name> <pod_name>=<image_name>:<image_tag> --record
+
+N.B:  --record  permet de sauvegarder commande dans l'historique la trace de la commande qui a servi a faire la mise a jour 
+
+=> status
+
+kubectl rollout status <deploy_name>
+
+kubectl rollout history <deploy_name> => Lister les changements
+
+N.B .spec.revisionHistoryLimit defaut = 10
+
+=> rollout
+
+kubectl rollout undo  <deploy_name> => revenir à la version précédente
+kubectl rollout undo  <deploy_name> --to-revision <X> => revenir  à une version X
+
+
+kubectl rollout restart <deploy_name> => redémarrage progressif des pods
+kubectl get pods -w => permet d'observer les états Pending, ConteinerCreating, Running, Terminating
+
+kubectl get deploy/www -o jsonpath='{.spec.template.spec.containers[0].image}' => verfier le fichier json de l'image
+
+***********************************************************************************************************
+Mise a l'echelle
+
+
+kubectl replace -f <yaml_file>
+kubectl scale <deploy_name> --replicas=<X> <yaml_file>
+kubectl scale <deploy_name> replicaset <metadata/name>
+
+kubectl get replicaset
+kubectl delete replicaset  <metadata/name>
+
+***********************************************************************************************************
+Deployment
+
+Objet de plus haut niveau que le replicaset.
+Permet de gérer la faonc dont les pod sont mis a jour
+
+kind: deployment
+
+
+***********************************************************************************************************
+Horzontal Pod Auto Scaler
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoScaler
+spec:
+	scaleTargetRef:
+		apiVersion: apps/V1
+		kind:Deployment
+		name:www
+	minReplicas: 2 => nombre min de pod
+	maxReplicas: 10 => nombre max de pod
+	targetCPUUtilizationPercentage: 50 => seuil charge CPU a ne pas depasser pour le deploiment
+
+kubectl autoscale deploy www --min=2 --max=10 --cpu-percent=50
+
+kubectl get hpa -w
+
+La dimunition du nombre de pod sera plus lente que l'augmentation
+
+Important: pour recuperer les infos liées a la conso CPU, il faut associer un composant 
+minikube addons enable metrics-server
+
+kubectl api-versions | grep autoscaling => verfier quelle version est dispo sur le cluster
+
+https://httpd.apache.org/docs/current/programs/ab.html => envoyer un grand nombre de requetes
+kubectl run ab -ti --rm --restart='Never' --image=lucj/ab -- -n 200000 -c 100 http://w3/
+
+
+
+	
+***********************************************************************************************************
+***********************************************************************************************************
+Namespace
+
+
+=> Segmenter un cluster, isoler un ensemble ressources par equipe /projets/ clients
+
+3 namespaces disponibles par default, kube-public, kube-system
+Par defaut: default
+
+Au sein d'un meme namespace les resources peuvent s'appeller par le nom. Un peu comme avec les network sur docker
+Chaque namespace peut etre dimensionné en resource
+
+Un service peut appeler un service d'un autre namespace en precisant le chemin complete
+
+service_name.namespace.service.domain
+
+db-service.dev.svc.cluster.local
+
+***********************************************************************************************************
+Creation
+kubectl create namespace <namespace>
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name:  development
+  labels:
+    name: development
+	
+
+Attacher un pod a un namespace avec la metadata/development
+Ajouter la clé namespace dans le pod 
+
+kubectl get po --namespace=development
+kubectl get po --all-namespaces
+
+kubectl config view
+
+context:
+    cluster: minikube
+    extensions:
+    - extension:
+        last-update: Mon, 28 Mar 2022 10:49:45 CEST
+        provider: minikube.sigs.k8s.io
+        version: v1.25.2
+      name: context_info
+    namespace: default
+    user: minikube
+  name: minikube
+  
+  => ici le namespace par defaut est utilisé
+
+Mettre à jour le namepsace du contexte
+kubectl config set-context $(kubectl config current-context) --namespace=development
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Resource requirements
+
+C'est le scheduler qui decide sur quel node instancier un pod suivant les ressources disponilbes
+si il n'y a pas assez de resource alors le pod sera en Pending et le message d'event sera insufficient CPU
+
+A l'execution si un container tente de depasser la capacité CPU, celui ci sera throttle
+Si il tente de depasser la memoire de manière constante , celui ci sera terminated
+=> chap : Limitation de ressources
+
+Un container docker n'a pas de limite sur les resources qu'il peut consommer
+ 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+ 
+spec:
+  containers:
+  - name: myapp
+    image: my
+    ports:
+        -containerPort: 8080
+    resources:
+        request:
+            memory: "1GB"
+            cpu: 1
+
+
+Ajout de limit
+        limits:
+            memory: "2GB"
+            cpu: 2
+
+
+***********************************************************************************************************
+Ajout de quotas 
+
+Gestion des ressources par namespaces
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  namespace: dev
+spec:
+  hard:
+    requests.cpu: "1"  	   => cpu pour l'ensemble des containerss
+    requests.memory: 1Gi   => memory pour l'ensemble des containers
+    limits.cpu: "2"        => cpu max pour l'ensemble des containers
+    limits.memory: 2Gi     => memory max pour l'ensemble des containers
+    pods: "10"
+
+
+Visualiser les ressources par namespace.
+N.B sous la clé used on peut vir les ressources actuellement consommées.
+kubectl get resourcequota quota --namespace=test --output=yaml
+
+***********************************************************************************************************
+Limitation de ressources
+
+
+fixe une limitation mémoire poru chaque container qui ser créé dans le namespace.
+
+On peut créer des ressources de type LimitRange et s'en servir poru définir les limitations des containers.
+Dans ce cas un container ne pourra pas définir lui meme des ressources qui sortirotn de ce cadre.
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: memory-limit-range
+spec:
+  limits:
+  - default:
+      memory: 128M
+    defaultRequest:
+      memory: 64M
+    max:
+      memory: 256M
+    type: Container
+
+
+
+***********************************************************************************************************
+environment variable
+
+env:
+    - name: <Var_Env_Name> 
+      value:  <value_name>
+
+
+env:
+    - name: <Var_Env_Name> 
+      valueFrom:  
+        configMapKeyRef:
+            name: <ConfigMap_Name>
+			key: <value_name>
+
+env:
+    - name: <Var_Key_Name>  
+      valueFrom:  
+        secretKeyRef:
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Config map
+
+Decouplage d'une application et de sa configuration => pas de config dans le code applicatif
+Asssure la portabilite
+Simplifie la gestion par rapport à l'utilisation de var environnement
+Peut etre créee a partir d'un fichier, repertoire ou valeur littérales
+Contient une / plusieurs parires clé/valeurs
+
+1. Creation de la configmap
+2. Injection dans le pod
+
+kubectl create configmap
+
+kubectl create -f
+
+***********************************************************************************************************
+Creation a partir de valeur littérales
+Inconventient: difficile a gerer si beaucoup de variables
+
+kubctl create configmap <nom_config> --from-literal=cle1=valeur1 --from-literal=cle2=valeur2 --from-literal=cle3=valeur3
+
+
+***********************************************************************************************************
+Creation a partir d'un fichier
+
+kubctl create configmap <nom_config> --from-file=<nom_fichier_config> <= Creation
+
+kubectl get cm <nom_config> -o yaml   <= visualiser la spec
+
+ajout section data 
+
+data:
+	<config_name> : 
+		user www-data;
+		worker_process 4;
+
+
+
+***********************************************************************************************************
+Creation a partir d'un fichier d'environnement
+
+<filename>.env
+cle1=valeur1
+cle2=valeur2
+cle3=valeur3
+
+kubctl create configmap <nom_config> --from-env-file=<nom_fichier_config.env> <= Creation
+kubectl get cm <nom_config> -o yaml   <= visualiser la spec
+
+
+***********************************************************************************************************
+Injection configMap dans le pod
+
+Injection de toute la config
+envFrom:
+    -configMapRef:
+        name: app-config
+
+Injection d'uen seule variable de la config
+env:
+    -configMapRef:
+        name: app-config      
+        key: <value>  
+
+Injection d'une config dans un volume
+volumes:
+-name: app-config-volume
+configMap:
+    name: app-config
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Secret
+
+Permettre la protection des données sensibles: mdp, chaines de connexion
+Eviter de définir ces infos dans les spec des IMAGES
+permet plus de souplesse dans leur gestion
+certains secret sont créés par l'utilsateur, d'autre par le systeme pour l'utilisation des pods
+Stocké dans etcd
+
+N.B De cette manière l'appliiation pourra acceder au secret depuis la path specifié
+
+Le fonctionnement:
+    Un secret est envoyé au noeud si un de ses pod le demande
+    Kubelet stocke le secret dans tmpfs => pas de stockage physique, uniquement mémoire
+    Une fois que le pod dont depend le secret est supprimé alors la copie locale du secret aussi
+
+
+1. Creation du secret
+2. Injection dans le pod
+
+kubectl create secret generic
+
+kubectl create -f
+
+différents types
+***********************************************************************************************************
+=> généric: a partir d'un fichier
+
+echo -n "admin" > ./username.txt
+echo -n "1234aazerty" > ./password.txt
+
+
+kubectl create secret generic <nom_du_secret> --from-file=./username.txt --from-file=./password.txt
+kubectl create secret generic service-creds --from-file=./username.txt --from-file=./password.txt
+
+***********************************************************************************************************
+=> généric: a partir d'un literal
+
+kubectl create secret generic service-creds2 --from-literal=./username.txt --from-literal=./password.txt
+
+kubectl get secrets
+
+=> inspection du secret
+
+kubectl describe secrets/<nom_du_secret>
+kubectl describe secrets/service-creds
+
+kubectl get secrets <nom_du_secret> -o yaml
+
+les données sont en base64
+echo string_base64 | base64 -D
+
+
+
+1. creation d'un secret
+2. creation d'un volume 
+	2.1 utilisation de la balise "secret" pour dire que l'on va utiliser un secret
+		secret:
+			secretName: <nom_du_secret>
+
+ou avec des clé/valeurs
+
+		secret:
+			secretName: <nom_du_secret>
+			items:
+			- 	key: username.txt
+				path: service/user
+			- 	key: password.txt
+				path: service/pass
+
+3. Montage du volume avec "volumeMounts"
+	- name: creds
+	mountPath: "/etc/creds"
+	readonly: true
+
+4. Vérifier le secret
+kubectl exec -ti apline --sh
+
+***********************************************************************************************************
+=> généric: A partir d'une variable d'environnement
+
+		env:
+			name: <var_env>
+			valueFrom:
+				secretKeyRef:
+				- 	name: <secret_name>
+					key:  <secret_value>
+		
+
+kubectl exec -ti apline --sh
+env | grep MONGO
+
+
+
+***********************************************************************************************************
+Injection secret dans le pod
+
+Injection de toute la config
+envFrom:
+    -secretRef:
+        name: app-secret 
+
+Injection d'uen seule variable de la config
+env:
+    -secretKeyRef:
+        name: app-secret     
+        key: <value>  
+
+Injection d'une config dans un volume
+volumes:
+-name: app-config-volume
+ secret:
+    secretName: app-secret 
+
+***********************************************************************************************************
+=> docker registry
+
+Utilisé pour s'identifier sur un registy docker
+usecase: recuperer des images privées depuis dockerHub
+
+kubectl create secret docker-registry registry-creds --coker-server=REGISTRY_FQDN --docker-username=USERNAME --docker-apssword=PASSWORD --docker-email=email
+kubectl get secret registry-creds -o yaml
+
+apiVersion: v1
+data:
+	.dockercfg: sqdkjlmqsdjqdsmlkjqljmsjù465df4sqdfq6s3d541<3   <==== credentials en base 64
+
+
+Pour pouvoir recuperer une image provée qui est utilisé dans un pod on ajoute la clé
+imagePullSecrets
+- name: <secret_name>
+
+
+***********************************************************************************************************
+=> tls
+
+Permet la gestion des certificats et clé privées
+
+1. creation du couple de clés certificat/cle privée
+openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out cert.pem
+
+2.creation du secret à partir des clés
+
+kubectl create secret tls <secret_name> --cert cert.pem --key key.pem
+kubectl create secret tls domain-pki --cert cert.pem --key key.pem
+
+3. kubectl get secret domain-pki -o yaml
+apiVersion: v1
+data:
+	tls.crt: sqdkjlmqsdjqdsmlkjqljmsjù465df4sqdfq6s3d541<3   <==== credentials en base 64
+	tls.key: sqdkjlmqsdjqdsmlkjqljmsjù465df4sqdfq6s3d541<3   <==== credentials en base 64
+
+4. Montage du secret via un volume
+
+kubectl exec -ti <nom_du_secret> --sh
+
+
+
+
+
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Authentification & control droit access & RBAC (role based access control)
+
+
+User Account Vs Service Account
+
+User account est utilisé par un utilisateur : 
+    un admin qui veut manipuler des pod
+    un developpeur qui veut mettre a jour un pod
+Service account est utiliser par une machine
+    un outil de monitoring qui a besoin d'acceder a une ressource
+
+
+kubectl create serviceaccount <mon-service_account>
+
+v1.22
+1. creation du service account
+2. creation d'un token associé au SA
+3. creation d'un secret
+4. stockage du token dans le secret 
+5. association du secret au service account
+La creation d'un SA entraine la fabrication d'un token qui doit etre utilisé pour s'authentifié aupres de l'API K8s
+
+Important: dans la version v1.24 on doit créer le token  qui ont desormais une date d'expiration et le secret
+kubectl create token <monSA>
+jq -R 'split(".") | select(length > 0) | .[0],.[1] | @base64 | fromjson' <<< <monToken>
+
+
+kubectl describe serviceaccount <monSA>
+
+kubectl describe secret serviceaccount <cle-de-tokens-dans-la-description-du-SA>
+
+si l'application tierce que l'on souhaite connecter au service est deja herbergée dans le cluster alors il suffit de monter le secret qui contient le token dans un volume
+
+Chaque namespace a son serviceaccount par defaut qui a seulement les droit pour executer les requetes API de base
+kubectl get serviceacount
+kubectl exec -it my-app ls /var/run/secrets/kubernetes.io/serviceaccount
+
+Il est possible de lié un autre service aacount que celui par defaut
+apiVersionkind
+metadata    
+    name:
+spec:
+    containers:
+        -   name:
+            image:
+    serviceAccountName: <monSA>
+
+Important: on ne peut pas editer le serviceAccouunt d'un pod existant. On doit supprimer et recréer le pod
+
+Il est possible de decider de ne pas monter de service account par defaut avec l'instruction
+automountServiceAccountToken: false
+
+
+Chaque requête envoyée à l'API Server doit être authentifiée (afin de s'assurer que la personne ou le processus à l'origine de la requête est connu du système) 
+puis être autorisée (afin de s'assurer que l'utilisateur a le droit de réaliser l'action demandée).
+
+Chaque fois que l'on utilise kubectl, c'est une requete a l'apiserver qui est faite
+1. authentification: savoir qui est a l'origine de la requete
+2. authorisation: savoir si celui qui fait la demande a les droits poru le faire
+
+une requete envoyée à l'api server peut parvenir:
+d'un humain
+	la gestion des users n'est pas faite dans le cluster via des plugins d'authentification
+		--client-ca-file=FILE au demarrage de l'api server
+		--token-auth-file=FILE au demarrage de l'api server
+		--basic-auth-file=FIELD au demarrage de l'api server
+
+d'un process interne envoye a par un pod
+	on transmet l'identite via la ressource serviceAccount
+	au lancement du pod on peut lui donner le nom du service account a utiliser
+		donne des droits aux containers tournant dans un pod
+		JWT token disponible via un secret
+
+	Par défaut il y a un ServiceAccount : default pour chaque namespace
+
+		
+
+
+1. Générer une clé privée (Certificate Singin Request)
+openssl genrsa -out <key_file>.key 2048
+openssl req -new -subj "/CN=luc/O=development" - key <key_file>.key -out <crt_file>.csr
+
+2. demande de signature de certificat (csr) 
+	specifier son identifiant
+			  son groupe
+
+
+
+3. Ajout d'une entrée dans la configuration
+kubctl config set-credentials <config_name> --client-key=<key_file>.key --client-certificate=<crt_file>.crt
+
+3.1 Creation d'une nouveau context
+kubctl config set-context <context_name> --cluste=CLUSTER_NAME --user=<user_name>
+
+3.2 Lister les pods dans le context <context_name>
+kubectl get pods --context <context_name>
+N.B on obteient une erreur. Il ne suffit pas que l'utilisateur soit définit, il faut également qu'il ait un rôle
+
+4 kubectl certificate approve
+
+***********************************************************************************************************
+Mise en place d'un control d'acces via un serviceAccount
+
+1. Lister les service acocunts
+kubectl get sa --all-namespaces
+
+2. Récupérer la spec du ServiceAccount. Ce dernier a accces a un token via un sercret
+kubectl get sa/default -o yaml => un secret est utilisé <secret_name>
+
+3. Recéupérer le secret
+kubectl get secret <secret_name>
+
+4. Décoder le token contenu dans le secret
+kubectl get secret <secret_name> -o jsonpath='{.data.token}' | base64 --decode
+https://jwt.io/
+
+Note: les ServiceAccount default n'ayant pas beaucoup de droits, 
+si un Pod a besoin de communiquer avec l'API Server il faudra donc créer un ServiceAccount 
+et lui donner les droits nécessaires en utilisant des ressources de type Role / ClusterRole ainsi que RoleBining / ClusterRoleBinding. 
+Nous verrons un exemple d'utilisation de ces ressources un plus loin.
+
+RBAC: ensemble de regles qui s'appliquent aux users et aux serviceAccounts
+On utilise différentes ressources:
+	Les rôles: permet de définir des regles dans un namepsace
+	Les clusterrole: permet de définir des rôles dans le cluster en entier
+	Les rolebinding / clusterrolebinding qui permettent d'associer les roles et les clusterrole aux utilisateurs/groupes ou aux servicesAccount
+
+La granularité peut etre gérée de manière plus ou moins filename
+
+Important: Un role est toujours limité à un namespace
+
+kubectl apply -f pod-default.yaml
+kubectl exec -ti pod-default -- sh
+apk add --update curl
+
+1. Connexion sans token
+curl https://kubernetes/api/v1 --insecure 
+	=> Error
+
+2. Connexion avec token
+TOKEN=$(cat /run/secrets/kubernetes.io/serviceaccount/token)
+curl -H "Authorization: Bearer $TOKEN" https://kubernetes/api/v1/ --insecure
+
+ curl -H "Authorization: Bearer $TOKEN" https://kubernetes/api/v1/namespaces/default/pods/ --insecure
+
+
+Par défaut, chaque Pod peut communiquer avec l'API Server du cluster sur lequel il tourne. 
+Si aucun ServiceAccount n'est spécifié dans la description du Pod, le ServiceAccount default du namespace est utilisé. 
+Celui-ci ayant des droits restreints, un ServiceAccount est généralement créé pour chaque application, en donnant à celui-ci les droits nécessaires.
+Pour s'authentifier auprès de l'API Server, le Pod utilise le token attaché au ServiceAccount. 
+Ce token est disponible depuis le système de fichiers de chaque container du Pod.
+Dans cet exemple, nous avons utilisé curl pour faire des requêtes à l'API Server. 
+Pour des applications réelles, nous utiliserions une librairie dédiée dans le language correspondant.
+
+
+
+
+
+
+***********************************************************************************************************
+Mise en place d'un control d'acces via un cert x509
+
+1. Creation de la clé privée
+mkdir -p config/david && cd config/david
+openssl genrsa -out david.key 4096
+
+
+2. Creation du certificat
+openssl req -new -subj "/O=dev/CN=david" -key david.key -out david.csr
+
+CN (CommonName) contient l'identificant de l'utilisateur, ici david
+O (Organisation) contient le nom du groupe de l'utilisateur, ici dev
+
+3. envoi du certificat a l'admin pour que celui ci soit signé avec l'authorité du cluster
+3.1 Encodage du contenu en b64 et stockage dans la variable d'env BASE64_CSR
+
+export BASE64_CSR=$(cat ./david.csr | base64 | tr -d '\n')
+
+3.2 Stockage de la variable 
+cat csr.yml | envsubst | kubectl apply -f -
+
+4. Approbation du certificat
+kubectl certificate approve mycsr
+
+5. Récupération du certifcat
+kubectl get csr mycsr -o jsonpath='{.status.certificate}' | base64 --decode > david.crt
+
+
+5.1 Vérification du certificat
+openssl x509 -in ./david.crt -noout -text
+
+
+
+
+***********************************************************************************************************
+Définition role pour définir des droits d'accès sur Pod, Service , Deployment
+
+1. Creation d'une ressource Role avec les rules
+kubectl apply -f role.yml
+2. Creation d'un RoleBinding pour associer le User au role ou le groupe au role
+kubectl apply -f rolebinding.yml
+
+3. Creation d'un template d'une ressource Config kubeconfig.tpl
+3.1 Gestion des variables d'environnement
+3.2 utilisateur
+export USER="david"
+3.3 cluster name
+export CLUSTER_NAME=$(kubectl config view --minify -o jsonpath={.current-context})
+3.4 certificat client
+export CLIENT_CERTIFICATE_DATA=$(kubectl get csr mycsr -o jsonpath='{.status.certificate}')
+3.5 url de l'api server
+export CLUSTER_CA=$(kubectl config view --minify --raw -o json | jq -r '.clusters[0].cluster["certificate-authority-data"]')
+
+3.6 substitution dans le fichier template
+cat kubeconfig.tpl | envsubst > kubeconfig
+
+4. export KUBECONFIG=$PWD/kubeconfig
+
+5. ajout de la clé dans la configuration
+kubectl config set-credentials david --client-key=$PWD/david.key --embed-certs=true
+kubectl config set-credentials david --client-key=david/david.key --embed-certs=true
+
+=> User "david" set.
+
+6. Test  kubectl get nodes
+Error from server (Forbidden): nodes is forbidden: User "david" cannot list resource "nodes" in API group "" at the cluster scope
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+
+***********************************************************************************************************
+***********************************************************************************************************
+IHM Web
+
+ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended.yaml
+
+ kubectl proxy
+
+ http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+
+ 
+***********************************************************************************************************
+***********************************************************************************************************
+Security Context
+
+
+Il est possible de définir depuis la spec du pod, l'utilisateur qui sera exploité dans le container
+
+apiVersion:
+kind:
+metadata:
+spec:
+    containers:
+        -   name:
+            image:
+            command:            
+            securityContext:
+                runAsUser: 1000
+                capabilities:
+                    add: ["MAC_ADMIN"]
+
+Docker security
+
+=> voir les processus 
+ps aux
+
+docker run --user=1000 ubuntu sleep 3600
+
+Le root du container n'est pas tout a fait le meme que celuii de l'hote, on peut limiter ses droits
+/usr/include/linux/capabilities.h
+
+Le root docker ne peut pas par exempel reboot l'hote ou perturber les fonctionnement des continers sur le meme hote
+
+si on veur surcharger les capacité du root du container on peut utiliser
+docker run --cap-add MAC_ADMIN <ubuntu>
+docker run --cap-drop MAC_ADMIN <ubuntu>
+
+tout autoriser
+docker run --privilegd <ubuntu>
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Multicontainer pod
+
+les pods partagent le meme cycle de vie / network / storage volume 
+scale up/down together
+
+=> side car pattern
+
+Avant d'envoyer les logs à un serveur centrale, on va positionner un adapter
+
+=> amabassadeur pattern
+
+proxifier la connectivité a une BDD
+
+
+***********************************************************************************************************
+***********************************************************************************************************
+Observability
+
+***********************************************************************************************************
+Readiness and liveness probes
+
+Pod status 
+1. Apres la creation d'un pod , celuii ci est en Pending le temps que le scheduler sache sur quel node le Mettre
+    Si le scheduler ne sait pas ou le mettre, il reste en pending
+    => kubectl describe pod
+2. Le scheduler a trouve une place sur un node alors on passe en ContainerCreating (pull image)
+3. running state => start containers
+
+POD Conditions
+
+PodScheduled
+Initialized
+ContainersReady
+Ready => app is running to accept user traffic
+
+=> see kubectl describe pod dans la section Conditions
+
+
+On doit lier l'état du container à celui du pod :
+
+spec:
+    containers:
+    - name: my-app
+      image: my-app
+      ports:
+        - containerPort: 8080
+      readinessProbe:
+        httpGet:
+         path: /api/Ready
+         port: 8080
+
+        tcpSocket:
+            port: 3306
+
+        exec:
+            command:
+                - cat
+                - /app/is_ready
+
+
+si on sait que ca prend du temps alors on peut ajouter un delay : 
+initialDelaySeconds: 10
+periodSeconds: 5
+failureThreshold: 8
+
+***********************************************************************************************************
+Container logging
+
+kubectl logs -f <my-pod> <container_name_if_many>
+
+***********************************************************************************************************
+Monitor 
+
+
+toos: 
+- metrics server
+- prometheus
+- elk
+- datadog
+- dynatrace
+
+***********************************************************************************************************
+***********************************************************************************************************
+Worloads
+
+Beaucoup d'applicatifs ont des cycles de vie qui sont long: une application, un site web....
+D'autre traitements comme des calculs, des traitements d'image, ont des cycles de vie plsu ephemeres
+
+avec docker il est possible d'instancier un container pour executer uen seule operation, et que le container soit detrut juste apres.
+
+Avec K8s c'est différent car la vocation d'un pod par défaut est d'assurer que les applicatifs sont UP. 
+Par defaut il redemarre automatiquement. 
+On doit jouer sur la propriete restartPolicy: Always / Never
+
+
+apiVersion: v1
+kind: pod
+metadata:
+    name: math-pod
+spec:
+    containers:
+    -name: math-add
+     image: ubuntu
+     command: ['expr', '3', '+', '2']
+     restartPolicy: Never
+
+ReplicaSet Vs jobs
+
+ReplicaSet assure qu'un nombre definit de pod s'executent en meme temps
+Jobs assure qu'un certain nombre dez pods existent pour executer une tache donnée
+
+***********************************************************************************************************
+Jobs
+
+apiVersion: v1
+kind: Job
+metadata:
+    name: math-add-job
+spec:
+    template:
+        spec:
+            containers:
+                -name: math-add
+                image: ubuntu
+                command: ['expr', '3', '+', '2']
+            restartPolicy: Never
+
+kubectl create -f job-definition.yaml
+
+kubectl get jobs
+kubectl get pods
+kubectl logs math-add-job
+kubectl delete job math-add-job
+
+
+On peut definir une condition d'arret du job par le nombre de job terminé avec success
+
+les jobs vont etre executes seuentiellement jusqu'a a attenidre la consigne de completion
+
+propriete completions: <x>
+
+apiVersion: v1
+kind: Job
+metadata:
+    name: math-add-job
+spec:
+    completions: 3
+    template:
+        spec:
+            containers:
+                -name: math-add
+                image: ubuntu
+                command: ['expr', '3', '+', '2']
+            restartPolicy: Never
+
+
+
+On peut egalement executer les jobs en parallele
+propriete: parallelism: <x>
+
+***********************************************************************************************************
+CronJob
+
+apiVersion: v1
+kind: CronJob
+metadata:
+    name: reporting-cron-job
+spec:
+    schedule: "*/1 * * * *"
+    jobTemplate:
+        spec:
+           completions: 3
+           parallelism: 3
+           template:
+                spec:
+                    containers:
+                        -name: reporting-tool
+                        image: reporting-tool
+                    restartPolicy: Never
+
+
