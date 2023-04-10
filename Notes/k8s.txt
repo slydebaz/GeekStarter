@@ -387,55 +387,6 @@ Terraform + Ansible
 
 
 
-***********************************************************************************************************
-* POD
-Plus petite unité applicative dans kubernetes
-groupe de containers qui partage la meme stack reseau (via localhost) / staockage (via volumes)
-chaque pod a une @IP dedies
-           se base sur uen specification (Yaml) qui définit les containeers qui tourneront dans le pod
-on peut voir un pod comme un applicatif métier d'uen application
-
-Cycle de vie 
--lancement 
-kubectl create -f POD_SPECIFICATION.yaml
-kubectl apply -f wordpress_pod.yml
-
-
--suppression 
-kubectl delete pod wp
-
--liste des pods (par defautl seulement les namespace default)
-kubectl get pod
-
--Description d'un pod
-kubctl describe pod POD_NAME
-kubctl describe po/POD_NAME
-
--logs
-
-kubectl logs POD_NAME [-c container name]
-
-Si il y a plusieurs replicas, la commande logs choisira arbitrairement un pod
-kubectl logs POD_NAME [-c container name] --follow --tail 1
-
-N.B la commande , combinée aux labels permet d'afficher les logs de plusieurs pods.
--shell interactive
-
-kubectl exec POD_NAME -t -i [-c container name] -- command
-ex: kubectl exec -ti www-594bc6dfc7-k48kh -- sh
-
--suppression pod
-kubectl delete POD_NAME
-
--forward de port (publier un port sur la machine hote)
-kubectl port-forward POD_NAME HOST_PORT:CONTAINER_PORT
-
--Container pause => garant des namespace
-
-N.B chaque pod communique via son @IP
-
-
-1 Volume est lié au cycle de vie du POD et non du container => Si le Container tombe , il n'entrain pas avec lui le volume
 
 
 ***********************************************************************************************************
