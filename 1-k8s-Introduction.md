@@ -22,17 +22,11 @@ Un container = processus qui peut etre executé de manière isolée
 ## Pourquoi un Orchestrateur ?
 
 Docker est le socle de base des architectures microservices
-Il faut donc une technologie  pour manipuler les conteiner, les changer, les deployer, revenir en arriere, avoir uen IHM poru monitorer tout ca.
+Il faut donc une technologie  pour manipuler les containers, les changer, les deployer, revenir en arriere, fournir avoir une IHM pour monitorer la solution etc....
 
 ## Comment savoir si on en a besoin ?
 
 *Server* x *Change Rate* = *Benefit of orchestration*
-
-## Kubernetes (K8s) c'est quoi ?
-
-C'est un orchestrateur d'application containerisées.
-
-C'est un jeu d'API qui se présente sous la forme d'un ensemble de containeurs mis au dessus de ceux qui representent le domaine applicatif.
 
 ## Un Orchestrateur ca sert à quoi ?
 
@@ -47,6 +41,10 @@ Il existe de nombreuses distributions de K8s qui viennent ajouter leurs features
 Amazon (ELK) ECS, Mesos, Marathon
 
 Vendors products: Docker Enterprise, Openshift Redhat, Ubuntu K8S, VMware pks
+
+## Kubernetes (K8s) c'est quoi ?
+
+C'est un ensemble d'API containerisées permettant d'orchestrer le comportement de l'application.
 
 # Références
 
@@ -207,105 +205,76 @@ K8s est un cluster
 
 ## Node Master
 
-- kube-apiserver 
-  - Expose l'api du cluster
-  - C'est le point d'entrée des rêquetes
-- kube-scheduler 
-  - intervient pour créer un pod et selectionner le node sur lequel il devra etre déployé
-- kube-controller-manager
-  - processus qui englobe plusieurs controlleurs qui sont en charge de surveiler l'etat des ressources et d'engager des actions correctives si une app ne tourne pas correctement
-- etcd
-  - *distributed key/value store* qui stocke l'etat du cluster et son historique
-  - peut etre installé sur le master ET ASUSSI sur un container externe
-  - responsable de l'implmentation des logs au sein du cluster.
-  - S'assure qu'il n'y a pas de conflit au sein du master node
+### kube-apiserver 
+
+- Expose l'api du cluster
+- C'est le point d'entrée des rêquetes
+
+### kube-scheduler 
+
+- intervient pour créer un pod et selectionner le node sur lequel il devra etre déployé
+
+### kube-controller-manager
+
+- processus qui englobe plusieurs controlleurs qui sont en charge de surveiler l'etat des ressources et d'engager des actions correctives si une app ne tourne pas correctement
+
+### etcd
+
+- *distributed key/value store* qui stocke l'etat du cluster et son historique
+- peut etre installé sur le master ET ASUSSI sur un container externe
+- responsable de l'implmentation des logs au sein du cluster.
+- S'assure qu'il n'y a pas de conflit au sein du master node
 
 ## Node Worker
 
-- kube-proxy
-  - gère le réseau pour l'exposition des services du node vers l'exterieur
-- kubelet
-  - Agent qui s'execute sur chaque noeud du cluster
-    - Communique avec le node master
-    - Assure que les containers d'un pod tournent conformement à la spécification
-    - Reboot en cas de crash.
-    - Communique avec l'API server du manager
-- container-runtime
-  - environnement d'execution des container: docker, rkt, cri-o ..
+### kube-proxy
 
-# Installation
+- gère le réseau pour l'exposition des services du node vers l'exterieur
 
-## MiniKube 
+### kubelet
 
-https://github.com/kubernetes/minikube
+- Agent qui s'execute sur chaque noeud du cluster
+- Communique avec le node master
+- Assure que les containers d'un pod tournent conformement à la spécification
+- Reboot en cas de crash.
+- Communique avec l'API server du manager
 
-https://minikube.sigs.k8s.io/docs/start/
+### container-runtime
 
-=> besoin d'un hyperviseur
-=>        binaire minikube
-=>      binaire kubectl
-=> execute une VM sur lequel s'execute l'ensemble des processus de K8s
-=> ca donne un cluster K8s avec un seul node  . PAs un environnement de production
+- environnement d'execution des container: docker, rkt, cri-o ..
 
-curl -Lo minikube <https://storage.googleapis.com/minikube/latest/12740/minikube-linux-386>
+K8s was built to orchestrate Docker in the beginning and not other vendors
+=> K8s introduced Container Runtime Interface  to allow work wtih other vendors than Dockers
 
-N.B: Par defaut le driver c'est Hyper-V, il es t possible de le changer par Virtualbox.
-si ca merde toujorsu apres une minkube start alors faire un ::
-minikube delete
-minikube start --no-vtx-check
-minikube start --no-vtx-check --cpus 4 --memory 8192
-./VBoxManage.exe modifyvm "minikube" --cpus 2 --memory 8192
+The condition is to be compliant with this Open Container Initiative : ImageSpec + RuntimeSpec
+ImageSpec: How an image should be built
+RuntimeSpec: How container runtime should be developped
 
-## Docker Desktop (Mac/Windows) 
+=> Now, anyone can build a Container Runtime that work with K8s
+Initially Docker was not built based on the CRI
 
-https://hub.docker.com/editions/community/docker-ce-desktop-windows
+K8s introduced DockerShim to keep supporting Docker 
 
-https://hub.docker.com/editions/community/docker-ce-desktop-mac
+ContainerD is CRI compatible
 
-=> anciennement Docker For Mac / Windows (fin 2018)
-=> choix de l'orchestrateur Swarm / Kubernetes
+Since K8s 1.24 DockerShim was removed
 
-Activation wsl(WSL, Windows System for Linux)
+ContainerD is now part of Docker.
+It can be isntalled alone but is not really user friendly with the commandline : ctr
 
-https://docs.microsoft.com/fr-fr/windows/wsl/
+instead prefer use nerdctl, very similar to docker
 
-https://docs.microsoft.com/fr-fr/windows/wsl
+Only for debug:
+CriCtl can be used to connect to any compatible runtime
 
-```bash
-install-manual #step-4---download-the-linux-kernel-update-package>
-wsl -l -v
-```
+unix:///var/run/dockershim.sock.or
+unix:///run/containerdd/containerd/sock or
+unix://run/crio.sock
+unix:///var/run/cri-dockerd-sock
 
-## Kind Kubernetes in Docker  
+crictl --runtime-endpoint
+export CONTAINER_RUNTIME_ENDPOINT
 
-https://github.com/kubernetes-sigs/kind
-
-- besoin de l'Api docker
-- Autre solution qui permet de lancer un ccuster en local
-- permet de créer une cluster avec un ou plusieurs nodes (avec fichier de configuration). Chaque Node s'execute dans un container
-
-## MicroK8s 
-
-https://microk8s.io/docs/getting-started
-
-https://microk8s.io/docs/install-alternatives
-
-- Execute un cluster composé d'un seul ou plusieurs nodes
-- très lights, fonctionne avec addon
-- pas mal pour les developpeurs, intragration continue, IoT
-- utilisation avec Multipass
-
-## K3s
-
-https://k3s.io/
-
-- convient très bien pour IoT et edgecomputing
-- issue de Rancher
-
-## Mutlipass
-
-- permet de créer de VM unbuntu facilement
-- Compatible avec plusieurs hyperviseurs
 
 # KubeCtl
 
