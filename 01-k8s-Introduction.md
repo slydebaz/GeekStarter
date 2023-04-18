@@ -46,25 +46,8 @@ Vendors products: Docker Enterprise, Openshift Redhat, Ubuntu K8S, VMware pks
 
 C'est un ensemble d'API containerisées permettant d'orchestrer le comportement de l'application.
 
-# Références
 
-[Cloud Native Computing Foundation](https://www.cncf.io/)
 
-[Twelve Factors App](https://12factor.net/)
-
-[K8s Partner](https://kubernetes.io/partners/#conformance)
-
-Pour apprendre:
-
-[katacoda](https://katacoda.com/)
-
-[play-with-k8s.com](play-with-k8s.com)
-
-[play-with-docker.com](play-with-docker.com)
-
-# Les concepts
-
-[K8s Documentation](https://kubernetes.io/docs/home/)
 
 ## Les types de noeuds
 

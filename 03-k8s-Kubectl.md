@@ -110,3 +110,12 @@ kubectl create namespace test-123 --dry-run -o json
 kubectl create namespace test-123 --dry-run -o yaml
 kubectl get pods -o wide
 ```
+
+```bash
+# ex
+kubectl create namespace test-123 --dry-run -o json
+kubectl create namespace test-123 --dry-run -o yaml
+kubectl get pods -o wide
+```
+
+N.B Si vous souhaiter vérifier la specification générée par une commande mais snas la créer pour de vrai, alors vous pouvez utiliser l'option --dry-run=client
