@@ -2,25 +2,22 @@
 
 # State Persistence
 
-## Rappel sur le comportement des volumes avec docker
+## Rappel sur la gestion des données dans les containers
 
-Afin de dissocier les données du cycle de vie des containers, on fait appel à des volumes que l'on bind aux containers applicatifs.
-Ainsi, lorsque les containers applicatifs sont supprimées, les données associées persistent sur le volume.
+Les conteneurs , au même titre que les pods ont une nature transciente par nature. 
+Lorsque les containers applicatifs sont supprimées,les données le seront aussi. 
+ 
+Afin de dissocier les données du cycle de vie des containers, on fait appel à des volumes que l'on bind aux containers applicatifs. Ainsi le conteneur peu etre detruit sans que cela entraine la destruction du volume.
 
-## Problématique liée à la clusterisation de l'infrastructure
+
+## Problématique liée à la clusterisation de l'infrastructure sur plusieurs nodes
 
 Sur un cluster distribué d'entrerprise, on a probablement plusieurs noeuds. Il faut pouvoir accéder aux données sans supposer d'ou est fait la demande d'accès.
-Contrairement à ce que l'on fait avec les docker de facon assez statique en bindant sur un 'path', il n'est pas recommandé de faire de même sur un cluster car les données ne se trouvent très probablement pas sur le même noeud.
+Contrairement à ce que l'on fait avec les docker de facon assez statique en bindant le reptoire de données aplicative du conteneur vers le , il n'est pas recommandé de faire de même sur un cluster car les données ne se trouvent très probablement pas sur le même noeud.
 
 
 todo: 3.34
 
-
-
-* Volume
-
-
-StatefulSets: permet de rendre les pods plus persistents
 
 Deux types de volumes:
 * Volumes
@@ -37,7 +34,10 @@ Basiquement on peut faire un montage de volume un peu comme avec les dockers. Ce
 
 K8s supporte différentes solutions de stockage: NFS, GlusterFS, Flocker, ScaleIO, AWS EBS, GCP, Azure, CEPH ...
 
-```bash 
+
+emptyDir: permettra de definir un volume dans le pod mais qui aura le meme cycle de vie que ce dernier. Les données seront supprimée à la suppression du pod
+
+```yaml 
 #Creation d'un volume associé à un POD
 apiVersion: v1
 kind: pod
@@ -87,7 +87,7 @@ Dans les PV on va définir:
 * la capacité
 * ...
 
-```bash 
+```yaml 
 #Creation d'un PersistentVolume
 apiVersion: v1
 kind: PersistentVolume 
@@ -116,12 +116,29 @@ Tips. Il est possible de cibler un PV depuis un PVC en définissant un seleteur 
 
 N.B. Un PVC restara dans un état Pending tant qu'il n'y aura pas de PV correspondant sur le cluster
 
-```bash 
+```yaml 
+#PersistentVolume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: pv-vol1
+spec:
+    accessModes:
+     - ReadWriteOnce
+    capacity:
+        storage: 500Mi
+    awsElasticBlockStore:
+        volumeID: <volume-id>
+        fsType: ext4
+
+```
+
+```yaml 
 #PersistentVolumeClaim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-    name: myclaim
+    name: pvc-1
 spec:
     accessModes:
      - ReadWriteOnce
@@ -131,7 +148,7 @@ spec:
         storage: 500Mi
 ```
 
-```bash 
+```yaml 
 #Pod
 apiVersion: v1
 kind: pod
@@ -149,16 +166,21 @@ spec:
 
     volumes:
     -names: data-volumes
-     persistentVolumeClaim:
-        claimName: myclaim
+        persistentVolumeClaim:
+            claimName: pvc-1
 ```
 
 ### Suppression d'un PVC
 
 Lors de la suppression d'une claim, on peut choisir la politique appliquée pour la conservation du Volume
 
-persistentVolumeReclaimPolicy: Retain (default) / Delete / Recycle
+persistentVolumeReclaimPolicy: 
 
+* Retain (default): les données du PV ne sont pas supprimées et nécessitent une aciton de la part de l'administrateur
+
+* Delete: suppression automatique du PV
+
+* Recycle
 
 
 Tips: dans la mesure du possible il est préféreable de limiter l'usage des StatefulSets
@@ -174,6 +196,8 @@ Static Provisonning: Le disque est créé manuellement avant le PersistentVolume
 
 gcloud beta compute disks create --size 1GB --region us-east1 pd-disk
 
+```yaml 
+#PersistentVolume
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -186,18 +210,18 @@ spec:
     gcePersistentDisk:
         pdName: pd-disk
         fsType: ext4
-
+```
 
 Dynamic Provisonning: 
-Automatically provisionne stockaage sur le provider et l'attacher au Pod quand le claim est fait
+Automatically provisionne stockage sur le provider et l'attacher au Pod quand le claim est fait
 
 Le but est de passer par un objet StorageClass pour créer automatiquement un PV.
 Dans le storage on va dire quel provider cibler
 
 On peut alors définir plusieurs standard de stockage (silver/gold/platinium)
 
-
-
+```yaml 
+#StorageClass
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -206,7 +230,10 @@ provisionner: kubernetes.io/gce-pd
 parameters:
     type: pd-standard               =>ces paramètres sont propres au provider
     replication-type: none
+```
 
+```yaml 
+#PersistentVolumeClaim
 apiVersion:v1
 kind: PersistentVolumeClaim
 metadata:
@@ -225,3 +252,4 @@ metadata:
     name: random-number-generator
 spec:
     containers:
+```
