@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name:  myapp-service
+spec:
+  type:  LoadBalancer | ClusterIP | NodePort
+  ports:
+  - name:  myapp-port
+    port:  80
+    targetPort:  8080   <= port du service 
+    nodePort: 30008     <= port exposé au node, faclutatif mais is non precise alors premier du range 
+  selector:
+    app: myapp
+    type: front-end

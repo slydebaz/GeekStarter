@@ -11,12 +11,9 @@ todo: schema 3.24 4.45
 
 Pour définir des limites de ressources d'un namespace, vous pouvez créer un ResourceQuota
 
-
-
 ```bash 
 #Suppression de ressources
 kubectl create -f <spec_file>.yaml --namespace=<namespace>
-
 ```
 
 Sinon vous pouvez ajouter une key/value namespace: <namespace> dans la section metadata
