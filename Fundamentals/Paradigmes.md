@@ -3,12 +3,19 @@
 
 ## Structured Programming
 
+
+
 Djikstra
 Tous les programmes sont constitués des actions suivantes
 Theoreme de Bohm-Jacopini
 - Sequence
 - Selection
 - Iteration
+
+
+La programmation modulaire est basée sur l'usage de  ces 
+=> le Goto est a proscrire
+=> simplifier le transfert de controle
 
 La programmation modulaire est basée sur l'usage de ces 3 blocs. On obtient un code plus senquetiel et lineaire
 

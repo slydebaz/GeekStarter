@@ -1,5 +1,7 @@
 # Les composants
 
+todo: Ralph Jonhson definition
+
 ensemble de classes/fonctions regroupes ensemble et deployable independemment
 
 3 regles:

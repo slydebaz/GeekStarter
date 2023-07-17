@@ -150,16 +150,7 @@ Partie droite / les secondary / les server side / les driven adapaters
 * Le paradigmes de programmation
 
 ** Structured Programming
-Djikstra
-Tous les programmes sont constitués des actions suivantes
-Theoreme de Bohm-Jacopini
-- Sequence 
-- Selection
-- Iteration
 
-La programmation modulaire est basée sur l'usage de  ces 
-=> le Goto est a proscrire
-=> simplifier le transfert de controle
 
 ** Object Oriented Programming
 
@@ -170,52 +161,6 @@ La programmation modulaire est basée sur l'usage de  ces
 
 
 
-
-
-
-*Pure Function
-*Immutability
-*How / What
-
-Un code impératif décrit le "comment" d'un algorithme. Il rentre dans les détails d'implémentation
-Un code déclaratif décrit le "quoi" d'un algorithme et permet donc d'en comprendre le sens sans avoir à rentrer obligatoirement dans les détails d'implémentation
-
-
-*SOLID
-** SRP
-Un bon test pour savoir si le principe est respecté ou violé, c'est de se demander, pour une fonction / une classe / un module : "quelle est sa responsabilité ?". Si l'on a envie de répondre avec "et" dans la phrase, c'est un signe fort que le principe est violé.
-
-
-*DRY : Don't Repeat Yourself
-mieux vaut une duplication qu'une mauvaise abstraction.
-
-*YAGNI : You Ain't Gonna Need It
-résister le plus possible à des optimisations prématurées tant que les problèmes sous-jacents n'ont pas été analysés. Il en va de même pour les fonctionnalités.
-
-*KISS : Keep It Stupid Simple
-Eviter le "au cas où", "un jour on en aura besoin"
-
-* CQS : Command-Query Separation
-Une command est une fonction qui va amener à un changement d'état dans le système, sans retourner de valeur.
-Une query est une fonction qui va retourner tout ou partie de l'état du système sans le modifier.
-
- Il est important de séparer d'un côté les fonctions qui modifie un état de celles qui ne font que retourner un résultat. Sans mélanger les deux types de fonctions.
-
-
-* Commenter son code est une mauvaise pratique, du moins, le commenter comme suggéré ci-dessus.
-
-mieux nommer ses variables et encapsuler le code dans des fonctions bien nommées =>  Le nom doit révéler l'intention !
-on évite d'avoir à "compiler" le code dans notre tête pour comprendre le contexte de la variable.
-
-Le nommage doit rester consistant et cohérent
-
-ne pas faire => “dans le doute mieux vaut juste le commenter plutôt que le supprimer”.
-faire =>  un “hack”, autrement dit une solution un peu “bricolée” mais qui fonctionne.
-
-il peut être pertinent de garder un commentaire général expliquant le choix de cet algorithme par exemple, ou expliciter un détail important propre à l’environnement et au contexte.
-
-Un bon commentaire à une valeur informative, pour apporter de la documentation ou un contexte supplémentaire qui ne peut être exprimé par le code
-Un mauvais commentaire est un commentaire qui n'apporte donc aucune information supplémentaire par rapport à du code bien écrit
 
 
 
