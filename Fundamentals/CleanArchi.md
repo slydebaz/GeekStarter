@@ -4,6 +4,10 @@
 
 ## Architecture: definition
 
+Robert C. Martin - "Uncle Bob" (2012)
+
+https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
+
 Objectif:
 MAximiser la productivité des développeurs
 Faciliter le changement du système
@@ -39,7 +43,7 @@ On souhaite avoir le pouvoir sur les details que sont : les framework, librairie
 
 Alistair Cockburn 2005
 
-Basé sur l'inversion de dépendence grace aux interfaces
+Basée sur l'inversion de dépendence grace aux interfaces
 
 ARchitectur e: Port / Adapateurs.
 
